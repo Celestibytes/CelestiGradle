@@ -3,9 +3,9 @@ apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-group = 'net.minecraftforge.gradle'
-version = '1.2-SNAPSHOT'
-archivesBaseName = 'ForgeGradle'
+group = 'io.github.pizzana'
+version = '0.2.0' // '1.2-SNAPSHOT'
+archivesBaseName = project.getName() // 'ForgeGradle'
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
 
@@ -76,67 +76,40 @@ artifacts { archives jar }
 
 uploadArchives {
     repositories {
-        if (project.hasProperty("filesmaven")) {
-            logger.info('Publishing to files server')
+        mavenDeployer {
+            repository(url: uri('../../maven'))
 
-            mavenDeployer {
-                configuration = configurations.deployerJars
+            pom {
+                groupId = project.group
+                version = project.version
+                artifactId = project.archivesBaseName
+                project {
+                    name project.archivesBaseName
+                    packaging 'jar'
+                    description 'Gradle plugin for CW'
+                    url 'https://github.com/PizzAna/CelestiGradle'
 
-                repository(url: project.filesmaven.url) {
-                    authentication(userName: project.filesmaven.username, privateKey: project.filesmaven.key)
-                }
+                    scm {
+                        url 'https://github.com/PizzAna/CelestiGradle'
+                        connection 'scm:git:git://github.com/PizzAna/CelestiGradle.git'
+                        developerConnection 'scm:git:git@github.com:PizzAna/CelestiGradle.git'
+                    }
 
-                pom {
-                    groupId = project.group
-                    version = project.version
-                    artifactId = project.archivesBaseName
-                    project {
-                        name project.archivesBaseName
-                        packaging 'jar'
-                        description 'Gradle plugin for Forge'
-                        url 'https://github.com/MinecraftForge/ForgeGradle'
+                    issueManagement {
+                        system 'github'
+                        url 'https://github.com/PizzAna/CelestiGradle/issues'
+                    }
 
-                        scm {
-                            url 'https://github.com/MinecraftForge/ForgeGradle'
-                            connection 'scm:git:git://github.com/MinecraftForge/ForgeGradle.git'
-                            developerConnection 'scm:git:git@github.com:MinecraftForge/ForgeGradle.git'
-                        }
-
-                        issueManagement {
-                            system 'github'
-                            url 'https://github.com/MinecraftForge/ForgeGradle/issues'
-                        }
-
-                        licenses {
-                            license {
-                                name 'Eclipse Public License (EPL), Version 1.0'
-                                url 'http://www.eclipse.org/legal/epl-v10.html'
-                                distribution 'repo'
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                id 'AbrarSyed'
-                                name 'Abrar Syed'
-                                roles { role 'developer' }
-                            }
-                        }
-                        developers {
-                            developer {
-                                id 'LexManos'
-                                name 'Lex Manos'
-                                roles { role 'developer' }
-                            }
+                    developers {
+                        developer {
+                            id 'PizzAna'
+                            name 'PizzAna'
+                            roles {role 'developer'}
                         }
                     }
+
                 }
             }
         }
-        else
-        {
-            add project.repositories.mavenLocal()
-        }
     }
 }
-

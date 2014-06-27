@@ -14,19 +14,27 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraftforge.gradle.delayed.DelayedFile;
 import net.minecraftforge.gradle.tasks.ProcessJarTask;
 import net.minecraftforge.gradle.tasks.ProcessSrcJarTask;
 import net.minecraftforge.gradle.tasks.RemapSourcesTask;
+import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 import net.minecraftforge.gradle.tasks.user.ApplyBinPatchesTask;
 import net.minecraftforge.gradle.user.UserBasePlugin;
 
+import groovy.lang.Closure;
+import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;
+import org.gradle.api.Plugin;
+import org.gradle.api.Project;
+import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.SourceSet;
 
 import com.google.common.collect.ImmutableList;
+import org.gradle.api.tasks.bundling.Jar;
 
 public abstract class UserPatchBasePlugin extends UserBasePlugin<UserPatchExtension>
 {

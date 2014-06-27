@@ -13,8 +13,10 @@ gradle-app.setting
 .project
 bin
 
-# intellij
-out
-*.idea
-*.iml
-
+# IntelliJ IDEA
+/.idea
+/*.iml
+/*.ipr
+/*.iws
+/out
+/atlassian-ide-plugin.xml

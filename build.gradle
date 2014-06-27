@@ -4,7 +4,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.pizzana'
-version = '0.2.0' // '1.2-SNAPSHOT'
+version = '0.3-SNAPSHOT' // '1.2-SNAPSHOT'
 archivesBaseName = project.getName() // 'ForgeGradle'
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'

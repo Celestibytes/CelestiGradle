@@ -143,6 +143,11 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     {
         if (!displayBanner)
             return;
+
+        // CG START
+        displayCGBanner();
+        // CG END
+
         project.getLogger().lifecycle("****************************");
         project.getLogger().lifecycle(" Powered By MCP:            ");
         project.getLogger().lifecycle(" http://mcp.ocean-labs.de/  ");
@@ -381,6 +386,14 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     protected DelayedFileTree delayedZipTree(String path)
     {
         return new DelayedFileTree(project, path, true, this);
+    }
+
+    private void displayCGBanner()
+    {
+        project.getLogger().lifecycle("****************************");
+        project.getLogger().lifecycle(" Welcome to CelestiGradle   ");
+        project.getLogger().lifecycle(" Based on ForgeGradle       ");
+        project.getLogger().lifecycle("****************************");
     }
 
 }

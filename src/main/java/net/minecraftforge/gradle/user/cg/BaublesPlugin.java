@@ -51,6 +51,7 @@ public class BaublesPlugin implements Plugin<Project>
 
             project.getTasks().getByName("setupDevWorkspace").dependsOn(getBaubles);
             project.getTasks().getByName("setupDecompWorkspace").dependsOn(getBaubles);
+            project.getTasks().getByName("setupCIWorkspace").dependsOn(getBaubles);
         }
         catch (Exception e)
         {

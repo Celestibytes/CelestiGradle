@@ -26,7 +26,9 @@ public class BaublesPlugin implements Plugin<Project>
             String baublesMc = GrepJava.getCWVersionFromJava(project, "BAUBLES_MC");
             String baubles = GrepJava.getCWVersionFromJava(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = GrepJava.getPropertyFromJava(project, "src/main/java/celestialwizardry/reference/Reference.java", "BAUBLES_ROOT");
+            String baublesRoot = GrepJava
+                    .getPropertyFromJava(project, "src/main/java/celestialwizardry/reference/Reference.java",
+                                         "BAUBLES_ROOT");
             final String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 

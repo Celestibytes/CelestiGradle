@@ -18,6 +18,7 @@ import net.minecraftforge.gradle.tasks.DownloadAssetsTask;
 import net.minecraftforge.gradle.tasks.ObtainFernFlowerTask;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 
+import io.github.pizzana.cg.reference.Reference;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -143,6 +144,11 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     {
         if (!displayBanner)
             return;
+
+        // CG START
+        displayCGBanner();
+        // CG END
+
         project.getLogger().lifecycle("****************************");
         project.getLogger().lifecycle(" Powered By MCP:            ");
         project.getLogger().lifecycle(" http://mcp.ocean-labs.de/  ");
@@ -381,6 +387,15 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     protected DelayedFileTree delayedZipTree(String path)
     {
         return new DelayedFileTree(project, path, true, this);
+    }
+
+    private void displayCGBanner()
+    {
+        project.getLogger().lifecycle("****************************");
+        project.getLogger().lifecycle(" Welcome to CelestiGradle   ");
+        project.getLogger().lifecycle(" Version " + Reference.VERSION);
+        project.getLogger().lifecycle(" Based on ForgeGradle       ");
+        // project.getLogger().lifecycle("****************************");
     }
 
 }

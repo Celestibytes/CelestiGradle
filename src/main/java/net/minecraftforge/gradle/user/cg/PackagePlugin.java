@@ -83,7 +83,10 @@ public class PackagePlugin implements Plugin<Project>
 
         Jar api = makeTask("apiJar", Jar.class);
         api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestialwizardry/api/"), new CopyInto("celestialwizardry/api/"));
+        api.from(delayedFile("{BUILD_DIR}/sources/java/celestialwizardry/api/"),
+                 new CopyInto("celestialwizardry/api/"));
+        api.from(delayedFile("{BUILD_DIR}/sources/java/celestialwizardry/crystal/api/"),
+                 new CopyInto("celestialwizardry/crystal/api/"));
         api.dependsOn(jarTask);
         api.setExtension("jar");
         project.getArtifacts().add("archives", api);

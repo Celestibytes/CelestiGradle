@@ -1,10 +1,25 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            name = "cbs"
+            url = "https://raw.githubusercontent.com/Celestibytes/maven/master/"
+        }
+    }
+    dependencies {
+        classpath 'io.github.pizzana:potential-octo-spice:0.1.2'
+    }
+}
+
+import static io.github.pizzana.util.GrepJava.*;
+
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.pizzana'
-version = '0.3.0' // '1.2-SNAPSHOT'
+version = getCGVersionFromJava(getProject(), "VERSION") // '1.2-SNAPSHOT'
 archivesBaseName = project.getName() // 'ForgeGradle'
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
@@ -24,6 +39,10 @@ repositories {
 		// because SpecialSource doesnt have a full release
         name = "sonatype"
         url = "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+    maven {
+        name = "cbs"
+        url = "https://raw.githubusercontent.com/Celestibytes/maven/master/"
     }
     mavenCentral()
 }
@@ -68,6 +87,9 @@ dependencies {
     compile 'de.oceanlabs.mcp:mcinjector:3.2-SNAPSHOT'
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
+    // potential-octo-spice
+    compile 'io.github.pizzana:potential-octo-spice:0.1.2'
+
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"
 }
@@ -87,17 +109,17 @@ uploadArchives {
                     name project.archivesBaseName
                     packaging 'jar'
                     description 'Gradle plugin for CW'
-                    url 'https://github.com/PizzAna/CelestiGradle'
+                    url 'https://github.com/Celestibytes/CelestiGradle'
 
                     scm {
-                        url 'https://github.com/PizzAna/CelestiGradle'
-                        connection 'scm:git:git://github.com/PizzAna/CelestiGradle.git'
-                        developerConnection 'scm:git:git@github.com:PizzAna/CelestiGradle.git'
+                        url 'https://github.com/Celestibytes/CelestiGradle'
+                        connection 'scm:git:git://github.com/Celestibytes/CelestiGradle.git'
+                        developerConnection 'scm:git:git@github.com:Celestibytes/CelestiGradle.git'
                     }
 
                     issueManagement {
                         system 'github'
-                        url 'https://github.com/PizzAna/CelestiGradle/issues'
+                        url 'https://github.com/Celestibytes/CelestiGradle/issues'
                     }
 
                     developers {

@@ -13,12 +13,11 @@ import net.minecraftforge.gradle.delayed.DelayedFileTree;
 import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.json.JsonFactory;
 import net.minecraftforge.gradle.json.version.AssetIndex;
-import net.minecraftforge.gradle.json.version.Version;
 import net.minecraftforge.gradle.tasks.DownloadAssetsTask;
 import net.minecraftforge.gradle.tasks.ObtainFernFlowerTask;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 
-import io.github.pizzana.cg.reference.Reference;
+import io.github.pizzana.cg.reference.Version;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -38,7 +37,7 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     public Project    project;
     @SuppressWarnings("rawtypes")
     public BasePlugin otherPlugin;
-    public Version    version;
+    public net.minecraftforge.gradle.json.version.Version version;
     public AssetIndex assetIndex;
 
     @SuppressWarnings("rawtypes")
@@ -393,7 +392,7 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     {
         project.getLogger().lifecycle("****************************");
         project.getLogger().lifecycle(" Welcome to CelestiGradle   ");
-        project.getLogger().lifecycle(" Version " + Reference.VERSION);
+        project.getLogger().lifecycle(" Version " + Version.VERSION);
         project.getLogger().lifecycle(" Based on ForgeGradle       ");
         // project.getLogger().lifecycle("****************************");
     }

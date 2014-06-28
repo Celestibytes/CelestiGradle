@@ -393,7 +393,7 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
         project.getLogger().lifecycle("****************************");
         project.getLogger().lifecycle(" Welcome to CelestiGradle   ");
         project.getLogger().lifecycle(" Based on ForgeGradle       ");
-        project.getLogger().lifecycle("****************************");
+        // project.getLogger().lifecycle("****************************");
     }
 
 }

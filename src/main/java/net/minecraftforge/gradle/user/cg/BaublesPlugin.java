@@ -33,7 +33,7 @@ public class BaublesPlugin implements Plugin<Project>
             final String baublesDest = "libs/" + baublesFile;
 
             DefaultTask getBaubles = makeTask("getBaubles");
-            getBaubles.dependsOn("extractUserDev");
+            // getBaubles.dependsOn("extractUserDev");
             getBaubles.doLast(new Action<Task>()
             {
                 @Override
@@ -51,9 +51,10 @@ public class BaublesPlugin implements Plugin<Project>
                 }
             });
 
-            project.getTasks().getByName("setupDevWorkspace").dependsOn(getBaubles);
-            project.getTasks().getByName("setupDecompWorkspace").dependsOn(getBaubles);
-            project.getTasks().getByName("setupCIWorkspace").dependsOn(getBaubles);
+            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
+            // project.getTasks().getByName("setupDevWorkspace").dependsOn(getBaubles);
+            // project.getTasks().getByName("setupDecompWorkspace").dependsOn(getBaubles);
+            // project.getTasks().getByName("setupCIWorkspace").dependsOn(getBaubles);
         }
         catch (Exception e)
         {

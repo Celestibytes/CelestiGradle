@@ -15,6 +15,7 @@ import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 
 public class CWReleasePlugin implements Plugin<Project>
@@ -25,6 +26,9 @@ public class CWReleasePlugin implements Plugin<Project>
     public void apply(Project project)
     {
         this.project = project;
+
+        applyExternalPlugin("cwpackage");
+
         createSignTask();
     }
 
@@ -67,6 +71,13 @@ public class CWReleasePlugin implements Plugin<Project>
         signJar.dependsOn("build");
 
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
+    }
+
+    public void applyExternalPlugin(String plugin)
+    {
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put("plugin", plugin);
+        project.apply(map);
     }
 
     public DefaultTask makeTask(String name)

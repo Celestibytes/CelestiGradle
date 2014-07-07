@@ -36,7 +36,7 @@ public class CWReleasePlugin implements Plugin<Project>
     {
         final Jar jar = (Jar) project.getTasks().getByName("jar");
         final File jarPath = jar.getArchivePath();
-        final File keystoreLocation = (File) project.getProperties().get("keystore_location");
+        final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
         final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
         final String keystorePassword = (String) project.getProperties().get("keystore_password");
 

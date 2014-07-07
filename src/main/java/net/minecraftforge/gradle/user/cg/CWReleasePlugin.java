@@ -27,9 +27,9 @@ public class CWReleasePlugin implements Plugin<Project>
     {
         this.project = project;
 
-        applyExternalPlugin("cwpackage");
-
         createSignTask();
+        
+        applyExternalPlugin("cwpackage");
     }
 
     private void createSignTask()

@@ -15,9 +15,13 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.specs.Spec;
+import org.gradle.api.tasks.Delete;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 // TODO Replace that BaseExtension
 public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
@@ -53,6 +57,56 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 
+            File[] files = delayedFile("libs").call().listFiles();
+            List<File> baubs = new ArrayList<File>();
+            boolean hasUpToDateBaubles = false;
+
+            if (files != null)
+            {
+                for (File file : files)
+                {
+                    if (file.isFile())
+                    {
+                        if (file.getName().contains("Baubles"))
+                        {
+                            if (file.getName().equals(baublesFile))
+                            {
+                                hasUpToDateBaubles = true;
+                            }
+                            else
+                            {
+                                baubs.add(file);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
+
+            for (File file : baubs)
+            {
+                cleanEveryBaubles.delete(file);
+            }
+
+            if (hasUpToDateBaubles)
+            {
+                cleanEveryBaubles.delete(delayedFile(baublesDest).call());
+            }
+
+            cleanEveryBaubles.setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
+            cleanEveryBaubles.setGroup(Reference.NAME);
+
+            Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
+
+            for (File file : baubs)
+            {
+                cleanBaubles.delete(file);
+            }
+
+            cleanBaubles.setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory (excluding the up-to-date one)");
+            cleanBaubles.setGroup(Reference.NAME);
+
             DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
             getBaubles.setUrl(delayedString(baublesUrl));
             getBaubles.setOutput(delayedFile(baublesDest));
@@ -67,7 +121,9 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
                     return excepted.call().exists() && !excepted.call().isDirectory();
                 }
             });
+            getBaubles.dependsOn(cleanBaubles);
 
+            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
         }
         catch (IOException e)
         {

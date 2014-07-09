@@ -44,7 +44,7 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
         // projectName = project.getName();
         String projectName = delayedString("{PROJECT}").call();
 
-        applyExternalPlugin("forge");
+        // applyExternalPlugin("forge");
 
         if (projectName.equalsIgnoreCase(Reference.CW_NAME.toLowerCase()))
         {

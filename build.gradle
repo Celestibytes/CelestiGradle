@@ -112,7 +112,7 @@ uploadArchives {
                 project {
                     name project.archivesBaseName
                     packaging 'jar'
-                    description 'Gradle plugin for CW'
+                    description 'Gradle plugin based on ForgeGradle'
                     url 'https://github.com/Celestibytes/CelestiGradle'
 
                     scm {

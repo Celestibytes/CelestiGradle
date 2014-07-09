@@ -17,6 +17,7 @@ import net.minecraftforge.gradle.tasks.DownloadAssetsTask;
 import net.minecraftforge.gradle.tasks.ObtainFernFlowerTask;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 
+import io.github.pizzana.cg.reference.Reference;
 import io.github.pizzana.cg.reference.Version;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
@@ -392,7 +393,7 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     private void displayCGBanner()
     {
         project.getLogger().lifecycle("****************************");
-        project.getLogger().lifecycle(" Welcome to CelestiGradle   ");
+        project.getLogger().lifecycle(" Welcome to " + Reference.NAME);
         project.getLogger().lifecycle(" Version " + Version.VERSION);
         project.getLogger().lifecycle(" Based on ForgeGradle       ");
         // project.getLogger().lifecycle("****************************");

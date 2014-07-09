@@ -15,6 +15,7 @@ import org.gradle.api.Task;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.tasks.bundling.Jar;
 
+@Deprecated
 public class CWPackagePlugin implements Plugin<Project>
 {
     public Project project;

@@ -12,6 +12,7 @@ import org.gradle.api.Task;
 
 import java.util.Map;
 
+@Deprecated
 public class BaublesPlugin implements Plugin<Project>
 {
     public Project project;

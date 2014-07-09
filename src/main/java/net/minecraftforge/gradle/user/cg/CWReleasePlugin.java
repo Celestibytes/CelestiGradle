@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+@Deprecated
 public class CWReleasePlugin implements Plugin<Project>
 {
     public Project project;

@@ -1,37 +1,10 @@
 package net.minecraftforge.gradle.user;
 
-import static net.minecraftforge.gradle.common.Constants.ASSETS;
 import static net.minecraftforge.gradle.common.Constants.FERNFLOWER;
 import static net.minecraftforge.gradle.common.Constants.JAR_CLIENT_FRESH;
 import static net.minecraftforge.gradle.common.Constants.JAR_MERGED;
 import static net.minecraftforge.gradle.common.Constants.JAR_SERVER_FRESH;
-import static net.minecraftforge.gradle.user.UserConstants.ASTYLE_CFG;
-import static net.minecraftforge.gradle.user.UserConstants.CLASSIFIER_DECOMPILED;
-import static net.minecraftforge.gradle.user.UserConstants.CLASSIFIER_DEOBF_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.CLASSIFIER_SOURCES;
-import static net.minecraftforge.gradle.user.UserConstants.CONFIG_DEPS;
-import static net.minecraftforge.gradle.user.UserConstants.CONFIG_MC;
-import static net.minecraftforge.gradle.user.UserConstants.CONFIG_NATIVES;
-import static net.minecraftforge.gradle.user.UserConstants.CONFIG_USERDEV;
-import static net.minecraftforge.gradle.user.UserConstants.DEOBF_MCP_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.DEOBF_SRG_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.DIRTY_DIR;
-import static net.minecraftforge.gradle.user.UserConstants.EXC_JSON;
-import static net.minecraftforge.gradle.user.UserConstants.EXC_MCP;
-import static net.minecraftforge.gradle.user.UserConstants.EXC_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.FIELD_CSV;
-import static net.minecraftforge.gradle.user.UserConstants.MCP_PATCH_DIR;
-import static net.minecraftforge.gradle.user.UserConstants.MERGE_CFG;
-import static net.minecraftforge.gradle.user.UserConstants.METHOD_CSV;
-import static net.minecraftforge.gradle.user.UserConstants.NATIVES_DIR;
-import static net.minecraftforge.gradle.user.UserConstants.PACKAGED_EXC;
-import static net.minecraftforge.gradle.user.UserConstants.PACKAGED_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.PARAM_CSV;
-import static net.minecraftforge.gradle.user.UserConstants.RECOMP_CLS_DIR;
-import static net.minecraftforge.gradle.user.UserConstants.RECOMP_SRC_DIR;
-import static net.minecraftforge.gradle.user.UserConstants.REOBF_NOTCH_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.REOBF_SRG;
-import static net.minecraftforge.gradle.user.UserConstants.SOURCES_DIR;
+import static net.minecraftforge.gradle.user.UserConstants.*;
 import groovy.lang.Closure;
 import groovy.util.Node;
 import groovy.util.XmlParser;
@@ -55,7 +28,6 @@ import joptsimple.internal.Strings;
 import net.minecraftforge.gradle.common.BasePlugin;
 import net.minecraftforge.gradle.delayed.DelayedFile;
 import net.minecraftforge.gradle.json.JsonFactory;
-import net.minecraftforge.gradle.tasks.CopyAssetsTask;
 import net.minecraftforge.gradle.tasks.DecompileTask;
 import net.minecraftforge.gradle.tasks.ExtractConfigTask;
 import net.minecraftforge.gradle.tasks.GenSrgTask;
@@ -138,13 +110,13 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
         //configureCISetup(task);
 
         task = makeTask("setupDevWorkspace", DefaultTask.class);
-        task.dependsOn("genSrgs", "deobfBinJar", "copyAssets", "extractNatives");
+        task.dependsOn("genSrgs", "deobfBinJar", "getAssets", "extractNatives");
         task.setDescription("CIWorkspace + natives and assets to run and test Minecraft");
         task.setGroup("ForgeGradle");
         //configureDevSetup(task);
 
         task = makeTask("setupDecompWorkspace", DefaultTask.class);
-        task.dependsOn("genSrgs", "copyAssets", "extractNatives", "repackMinecraft");
+        task.dependsOn("genSrgs", "getAssets", "extractNatives", "repackMinecraft");
         task.setDescription("DevWorkspace + the deobfuscated Minecraft source linked as a source jar.");
         task.setGroup("ForgeGradle");
         //configureDecompSetup(task);
@@ -462,7 +434,22 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
                     String module = task.getProject().getProjectDir().getCanonicalPath();
                     File file = project.file(".idea/workspace.xml");
                     if (!file.exists())
-                        throw new RuntimeException("Only run this task after importing a build.gradle file into intellij!");
+                    {
+                        file = null;
+                        // find iws file
+                        for (File f : project.getProjectDir().listFiles())
+                        {
+                            if (f.isFile() && f.getName().endsWith(".iws"))
+                            {
+                                file = f;
+                            }
+                        }
+
+                        if (file == null)
+                        {
+                            throw new RuntimeException("Only run this task after importing a build.gradle file into intellij!");
+                        }
+                    }
 
                     DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
                     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
@@ -569,7 +556,7 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
             add(child, "option", "name", "MAIN_CLASS_NAME", "value", data[1]);
             add(child, "option", "name", "VM_PARAMETERS", "value", data[2]);
             add(child, "option", "name", "PROGRAM_PARAMETERS", "value", data[3]);
-            add(child, "option", "name", "WORKING_DIRECTORY", "value", "file://" + delayedFile("{ASSET_DIR}").call().getParentFile().getCanonicalPath().replace(module, "$PROJECT_DIR$"));
+            add(child, "option", "name", "WORKING_DIRECTORY", "value", "file://" + delayedFile("{RUN_DIR}").call().getCanonicalPath().replace(module, "$PROJECT_DIR$"));
             add(child, "option", "name", "ALTERNATIVE_JRE_PATH_ENABLED", "value", "false");
             add(child, "option", "name", "ALTERNATIVE_JRE_PATH", "value", "");
             add(child, "option", "name", "ENABLE_SWING_INSPECTOR", "value", "false");
@@ -596,14 +583,6 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
     
     private void tasks()
     {
-        {
-            CopyAssetsTask task = makeTask("copyAssets", CopyAssetsTask.class);
-            task.setAssetsDir(delayedFile(ASSETS));
-            task.setOutputDir(delayedFile("{ASSET_DIR}"));
-            task.setAssetIndex(getAssetIndexClosure());
-            task.dependsOn("getAssets");
-        }
-        
         {
             GenSrgTask task = makeTask("genSrgs", GenSrgTask.class);
             task.setInSrg(delayedFile(PACKAGED_SRG));
@@ -738,6 +717,7 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
             extract.from(remapped);
             extract.into(recompSrc);
             extract.setIncludeEmptyDirs(false);
+            extract.setClean(true);
             extract.dependsOn(remap);
 
             extract.onlyIf(onlyIfCheck);
@@ -766,15 +746,16 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
             repackageTask.onlyIf(onlyIfCheck);
         }
     }
-    
-    private final void createExecTasks()
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void createExecTasks()
     {
         JavaExec exec = makeTask("runClient", JavaExec.class);
         {
             exec.setMain(getClientRunClass());
-            exec.jvmArgs("-Xincgc", "-Xmx1024M", "-Xms1024M", "-Dfml.ignoreInvalidMinecraftCertificates=true");
+            //exec.jvmArgs("-Xincgc", "-Xmx1024M", "-Xms1024M", "-Dfml.ignoreInvalidMinecraftCertificates=true");
             exec.args(getClientRunArgs());
-            exec.workingDir(delayedFile("{ASSET_DIR}/.."));
+            exec.workingDir(delayedFile("{RUN_DIR}"));
             exec.setStandardOutput(System.out);
             exec.setErrorOutput(System.err);
 
@@ -786,7 +767,7 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
         {
             exec.setMain(getServerRunClass());
             exec.jvmArgs("-Xincgc", "-Dfml.ignoreInvalidMinecraftCertificates=true");
-            exec.workingDir(delayedFile("{ASSET_DIR}/.."));
+            exec.workingDir(delayedFile("{RUN_DIR}"));
             exec.args(getServerRunArgs());
             exec.setStandardOutput(System.out);
             exec.setStandardInput(System.in);
@@ -798,10 +779,23 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
 
         exec = makeTask("debugClient", JavaExec.class);
         {
+            exec.doFirst( new Action() {
+                @Override public void execute(Object o)
+                {
+                    project.getLogger().error("");
+                    project.getLogger().error("THIS TASK WILL BE DEP RECATED SOON!");
+                    project.getLogger().error("Instead use the runClient task, with the --debug-jvm option");
+                    if (!project.getGradle().getGradleVersion().equals("1.12"))
+                    {
+                        project.getLogger().error("You may have to update to Gradle 1.12");
+                    }
+                    project.getLogger().error("");
+                }
+            });
             exec.setMain(getClientRunClass());
             exec.jvmArgs("-Xincgc", "-Xmx1024M", "-Xms1024M", "-Dfml.ignoreInvalidMinecraftCertificates=true");
             exec.args(getClientRunArgs());
-            exec.workingDir(delayedFile("{ASSET_DIR}/.."));
+            exec.workingDir(delayedFile("{RUN_DIR}"));
             exec.setStandardOutput(System.out);
             exec.setErrorOutput(System.err);
             exec.setDebug(true);
@@ -812,9 +806,22 @@ public abstract class UserBasePlugin<T extends UserExtension> extends BasePlugin
 
         exec = makeTask("debugServer", JavaExec.class);
         {
+            exec.doFirst( new Action() {
+                @Override public void execute(Object o)
+                {
+                    project.getLogger().error("");
+                    project.getLogger().error("THIS TASK WILL BE DEPRECATED SOON!");
+                    project.getLogger().error("Instead use the runServer task, with the --debug-jvm option");
+                    if (!project.getGradle().getGradleVersion().equals("1.12"))
+                    {
+                        project.getLogger().error("You may have to update to Gradle 1.12");
+                    }
+                    project.getLogger().error("");
+                }
+            });
             exec.setMain(getServerRunClass());
             exec.jvmArgs("-Xincgc", "-Dfml.ignoreInvalidMinecraftCertificates=true");
-            exec.workingDir(delayedFile("{ASSET_DIR}/.."));
+            exec.workingDir(delayedFile("{RUN_DIR}"));
             exec.args(getServerRunArgs());
             exec.setStandardOutput(System.out);
             exec.setStandardInput(System.in);

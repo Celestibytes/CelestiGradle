@@ -1,4 +1,4 @@
-package io.github.pizzana.cg.reference;
+package celestibytes.gradle.reference;
 
 public class Reference
 {

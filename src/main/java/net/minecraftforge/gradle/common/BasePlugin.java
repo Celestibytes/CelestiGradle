@@ -17,8 +17,8 @@ import net.minecraftforge.gradle.tasks.DownloadAssetsTask;
 import net.minecraftforge.gradle.tasks.ObtainFernFlowerTask;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 
-import io.github.pizzana.cg.reference.Reference;
-import io.github.pizzana.cg.reference.Version;
+import celestibytes.gradle.reference.Reference;
+import celestibytes.gradle.reference.Version;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;

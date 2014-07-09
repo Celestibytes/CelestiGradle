@@ -19,7 +19,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.pizzana'
-version = getCGVersionFromJava(getProject(), "VERSION") // '1.2-SNAPSHOT'
+version = getPropertyFromJava(getProject(), "src/main/java/celestibytes/gradle/reference/Version.java", "VERSION") // '1.2-SNAPSHOT'
 archivesBaseName = project.getName() // 'ForgeGradle'
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'

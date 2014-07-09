@@ -1,9 +1,9 @@
 package net.minecraftforge.gradle.user.cg;
 
 import net.minecraftforge.gradle.common.BasePlugin;
-import net.minecraftforge.gradle.user.cg.util.GrepJava;
 
 import com.google.common.collect.Maps;
+import io.github.pizzana.util.GrepJava;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -33,7 +33,6 @@ public class BaublesPlugin implements Plugin<Project>
             final String baublesDest = "libs/" + baublesFile;
 
             DefaultTask getBaubles = makeTask("getBaubles");
-            getBaubles.dependsOn("extractUserDev");
             getBaubles.doLast(new Action<Task>()
             {
                 @Override
@@ -51,9 +50,7 @@ public class BaublesPlugin implements Plugin<Project>
                 }
             });
 
-            project.getTasks().getByName("setupDevWorkspace").dependsOn(getBaubles);
-            project.getTasks().getByName("setupDecompWorkspace").dependsOn(getBaubles);
-            project.getTasks().getByName("setupCIWorkspace").dependsOn(getBaubles);
+            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
         }
         catch (Exception e)
         {

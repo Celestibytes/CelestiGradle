@@ -52,6 +52,8 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
             makeCWPackageTasks();
             makeCWSignTask();
         }
+
+        makeLifecycleTasks();
     }
 
     public void makeCWPackageTasks()
@@ -177,10 +179,10 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
     {
         try
         {
-            String baublesMc = PorjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
-            String baubles = PorjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
+            String baublesMc = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
+            String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = PorjectPropertyHelper.Source.getProperty(project,
+            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project,
                                                               "src/main/java/celestialwizardry/reference/Reference" +
                                                                       ".java",
                                                               "BAUBLES_ROOT");
@@ -265,6 +267,14 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
             project.getLogger().warn("Failed to get baubles properties");
             e.printStackTrace();
         }
+    }
+
+    public void makeLifecycleTasks()
+    {
+        DefaultTask release = makeTask("release", DefaultTask.class);
+        release.setDescription("Wrapper task for building release-ready archives.");
+        release.setGroup(Reference.NAME);
+        release.dependsOn("uploadArchives");
     }
 
     public DefaultTask makeTask(String name)

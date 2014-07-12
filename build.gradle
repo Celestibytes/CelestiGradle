@@ -3,15 +3,15 @@ buildscript {
         mavenCentral()
         maven {
             name = "cbs"
-            url = "https://raw.githubusercontent.com/Celestibytes/maven/master/"
+            url = "https://raw.githubusercontent.com/PizzAna/maven/master/"
         }
     }
     dependencies {
-        classpath 'io.github.pizzana:JKaffe:0.1.0'
+        classpath 'io.github.pizzana:JKaffe:1.0.0'
     }
 }
 
-import static io.github.pizzana.jkaffe.util.PropertyHelper.Source*;
+import static io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper.Source.*;
 
 apply plugin: 'java'
 apply plugin: 'idea'

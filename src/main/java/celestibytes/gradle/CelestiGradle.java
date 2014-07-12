@@ -10,10 +10,10 @@ import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
+import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
 import celestibytes.gradle.reference.Reference;
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
-import io.github.pizzana.util.GrepJava;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -177,10 +177,10 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
     {
         try
         {
-            String baublesMc = GrepJava.getCWVersionFromJava(project, "BAUBLES_MC");
-            String baubles = GrepJava.getCWVersionFromJava(project, "BAUBLES");
+            String baublesMc = PorjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
+            String baubles = PorjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = GrepJava.getPropertyFromJava(project,
+            String baublesRoot = PorjectPropertyHelper.Source.getProperty(project,
                                                               "src/main/java/celestialwizardry/reference/Reference" +
                                                                       ".java",
                                                               "BAUBLES_ROOT");

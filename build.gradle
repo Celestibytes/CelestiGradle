@@ -3,24 +3,24 @@ buildscript {
         mavenCentral()
         maven {
             name = "cbs"
-            url = "https://raw.githubusercontent.com/Celestibytes/maven/master/"
+            url = "https://raw.githubusercontent.com/PizzAna/maven/master/"
         }
     }
     dependencies {
-        classpath 'io.github.pizzana:potential-octo-spice:0.1.2'
+        classpath 'io.github.pizzana:JKaffe:1.0.0'
     }
 }
 
-import static io.github.pizzana.util.GrepJava.*;
+import static io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper.Source.*;
 
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-group = 'io.github.pizzana'
-version = getCGVersionFromJava(getProject(), "VERSION") // '1.2-SNAPSHOT'
-archivesBaseName = project.getName() // 'ForgeGradle'
+group = 'celestibytes.gradle'
+version = getCGVersion(getProject(), "VERSION")
+archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
 
@@ -31,12 +31,10 @@ repositories {
         url = "http://files.minecraftforge.net/maven"
     }
 	maven {
-		// because Srg2Source needs an eclipse dependency.
 		name = "eclipse"
 		url = "https://repo.eclipse.org/content/groups/eclipse/"
 	}
     maven {
-		// because SpecialSource doesnt have a full release
         name = "sonatype"
         url = "https://oss.sonatype.org/content/repositories/snapshots/"
     }
@@ -44,11 +42,11 @@ repositories {
         name = "cbs"
         url = "https://raw.githubusercontent.com/Celestibytes/maven/master/"
     }
-    mavenCentral()
-    maven {
+	maven {
         name = "mojang"
         url = "https://libraries.minecraft.net/"
     }
+    mavenCentral()
 }
 
 jar {
@@ -91,8 +89,8 @@ dependencies {
     compile 'de.oceanlabs.mcp:mcinjector:3.2-SNAPSHOT'
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
-    // potential-octo-spice
-    compile 'io.github.pizzana:potential-octo-spice:0.1.2'
+    // JKaffe
+    compile 'io.github.pizzana:JKaffe:0.1.0'
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"

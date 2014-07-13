@@ -40,7 +40,7 @@ repositories {
     }
     maven {
         name = "cbs"
-        url = "https://raw.githubusercontent.com/Celestibytes/maven/master/"
+        url = "https://raw.githubusercontent.com/PizzAna/maven/master/"
     }
 	maven {
         name = "mojang"
@@ -90,7 +90,7 @@ dependencies {
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // JKaffe
-    compile 'io.github.pizzana:JKaffe:0.1.0'
+    compile 'io.github.pizzana:JKaffe:1.0.0'
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"

@@ -10,10 +10,10 @@ import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
-import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
 import celestibytes.gradle.reference.Reference;
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
+import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -79,7 +79,8 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
             {
                 Manifest manifest = (Manifest) getDelegate();
                 manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString("celestialwizardry.codechicken.core.launch.DepLoader")
+                                             delayedString(
+                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
                                                      .call());
                 manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
                 return null;
@@ -114,10 +115,10 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
 
         Jar api = makeTask("apiJar", Jar.class);
         api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestialwizardry/api/"),
-                 new CopyInto("celestialwizardry/api/"));
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestialwizardry/crystal/api/"),
-                 new CopyInto("celestialwizardry/crystal/api/"));
+        api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/celestialwizardry/api/"),
+                 new CopyInto("celestibytes/celestialwizardry/api/"));
+        api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/celestialwizardry/crystal/api/"),
+                 new CopyInto("celestibytes/celestialwizardry/crystal/api/"));
         api.dependsOn(jarTask);
         api.setExtension("jar");
         project.getArtifacts().add("archives", api);
@@ -183,9 +184,10 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
             String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
             String baublesRoot = ProjectPropertyHelper.Source.getProperty(project,
-                                                              "src/main/java/celestialwizardry/reference/Reference" +
-                                                                      ".java",
-                                                              "BAUBLES_ROOT");
+                                                                          "src/main/java/celestibytes/celestialwizardry/reference/Reference"
+                                                                                  +
+                                                                                  ".java",
+                                                                          "BAUBLES_ROOT");
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 

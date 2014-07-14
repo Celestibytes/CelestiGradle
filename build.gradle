@@ -113,10 +113,15 @@ eclipse.classpath.plusConfigurations += configurations.compileOnly
 
 uploadArchives {
     repositories {
-        mavenDeployer {
-            repository(url: uri('../../maven'))
+        if (project.hasProperty("filesmaven")) {
+            logger.info('Publishing to files server')
 
-            pom {
+            mavenDeployer {
+                configuration = configurations.deployerJars
+
+                repository(url: uri(project.filesmaven)) 
+
+                pom {
                 groupId = project.group
                 version = project.version
                 artifactId = project.archivesBaseName
@@ -146,6 +151,16 @@ uploadArchives {
                     }
 
                 }
+            }
+            }
+        }
+        else
+        {
+            add project.repositories.mavenLocal()
+            logger.info('Publishing to repo folder')
+            
+            mavenDeployer {
+                repository(url: 'file://localhost/' + project.file('repo').getAbsolutePath())
             }
         }
     }

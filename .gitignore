@@ -2,6 +2,7 @@
 .gradle
 build
 gradle-app.setting
+gradle.properties
 
 # GMCP plugin
 /minecraft
@@ -20,3 +21,4 @@ bin
 /*.iws
 /out
 /atlassian-ide-plugin.xml
+/repo/

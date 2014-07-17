@@ -109,13 +109,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 Runtime runtime = Runtime.getRuntime();
                 try
                 {
-                    Process process = runtime.exec("cd " + delayedString("{CORE_DIR_REL}").call());
+                    String gradle = "gradlew";
+                    File workingDir = delayedFile("{CORE_DIR}").call();
+                    Process process = runtime.exec(new String[]{gradle, "setupDecompWorkspace"}, null, workingDir);
                     process.waitFor();
-                    process = runtime.exec("gradlew setupCiWorkspace");
-                    process.waitFor();
-                    process = runtime.exec("gradlew build");
-                    process.waitFor();
-                    process = runtime.exec("cd ..");
+                    process = runtime.exec(new String[]{gradle, "build"}, null, workingDir);
                     process.waitFor();
                 }
                 catch (IOException e)
@@ -539,7 +537,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         pattern = pattern.replace("{CORE_DIR_REL}", "./CelestiCore");
-        pattern = pattern.replace("{CORE_DIR}", project.getProjectDir().getAbsolutePath() + "/CelestiCore");
+        pattern = pattern.replace("{CORE_DIR}", project.getProjectDir().getAbsolutePath().replace('\\', '/') + "/CelestiCore");
         pattern = pattern.replace("{CORE_LIB}", "./CelestiCore/dep");
         pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
         return pattern;

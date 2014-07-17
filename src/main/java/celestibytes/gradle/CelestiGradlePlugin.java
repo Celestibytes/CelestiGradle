@@ -24,7 +24,6 @@ import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.Delete;
-import org.gradle.api.tasks.Exec;
 import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
@@ -89,7 +88,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             }
         }
 
-        Exec makeCore = makeTask("makeCore", Exec.class);
+        DefaultTask makeCore = makeTask("makeCore", DefaultTask.class);
         makeCore.setDescription(
                 delayedString("Makes sure that there is a correct version of {CORE_NAME} available").call());
         makeCore.setGroup(Reference.NAME);
@@ -102,9 +101,29 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 return !finalHasCore;
             }
         });
-        makeCore.setWorkingDir(delayedString("{CORE_DIR_REL}").call());
-        makeCore.commandLine("cmd", "/c", "build.bat");
-        makeCore.commandLine("build.sh");
+        makeCore.doLast(new Action<Task>()
+        {
+            @Override
+            public void execute(Task task)
+            {
+                Runtime runtime = Runtime.getRuntime();
+                try
+                {
+                    Process process = runtime.exec("gradlew setupCiWorkspace", null, delayedFile("{CORE_DIR}").call());
+                    process.waitFor();
+                    process = runtime.exec("gradlew build", null, delayedFile("{CORE_DIR}").call());
+                    process.waitFor();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
 
         Copy copyCore = makeTask("copyCore", Copy.class);
         copyCore.onlyIf(new Spec<Task>()

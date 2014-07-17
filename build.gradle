@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
         maven {
             name = "cbs"
-            url = "https://raw.githubusercontent.com/PizzAna/maven/master/"
+            url = "https://raw.githubusercontent.com/PizzAna/maven/master/releases"
         }
     }
     dependencies {
@@ -100,7 +100,7 @@ dependencies {
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"
     
-    //Stuff used in the GradleStart classes
+    // Stuff used in the GradleStart classes
     compileOnly 'com.mojang:authlib:1.5.16'
 }
 
@@ -117,8 +117,6 @@ uploadArchives {
             logger.info('Publishing to files server')
 
             mavenDeployer {
-                configuration = configurations.deployerJars
-
                 repository(url: uri(project.filesmaven)) 
 
                 pom {

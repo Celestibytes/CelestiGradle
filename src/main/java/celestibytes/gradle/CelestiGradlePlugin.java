@@ -19,9 +19,12 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.file.FileTreeElement;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
+import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.Delete;
+import org.gradle.api.tasks.Exec;
 import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
@@ -31,8 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// TODO Replace that BaseExtension
-public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
+public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
     private Project project;
     // private String projectName;
@@ -45,6 +47,12 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
         String projectName = delayedString("{PROJECT}").call();
 
         // applyExternalPlugin("forge");
+
+        if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
+                .equals(Reference.DGC_NAME.toLowerCase()))
+        {
+            makeCoreDepTasks();
+        }
 
         if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()))
         {
@@ -60,6 +68,164 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
         }
 
         makeLifecycleTasks();
+    }
+
+    public void makeCoreDepTasks()
+    {
+        boolean hasCore = false;
+        File[] files = delayedFile("{CORE_LIB}").call().listFiles();
+
+        if (files != null)
+        {
+            for (File file : files)
+            {
+                if (file.isFile())
+                {
+                    if (file.getName().contains(delayedString("{CORE_NAME}").call()) && file.getName().contains(".jar"))
+                    {
+                        hasCore = true;
+                    }
+                }
+            }
+        }
+
+        Exec makeCore = makeTask("makeCore", Exec.class);
+        makeCore.setDescription(
+                delayedString("Makes sure that there is a correct version of {CORE_NAME} available").call());
+        makeCore.setGroup(Reference.NAME);
+        final boolean finalHasCore = hasCore;
+        makeCore.onlyIf(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                return !finalHasCore;
+            }
+        });
+        makeCore.setWorkingDir(delayedString("{CORE_DIR_REL}").call());
+        makeCore.commandLine("cmd", "/c", "gradlew.bat build");
+        makeCore.commandLine("gradlew build");
+
+        Copy copyCore = makeTask("copyCore", Copy.class);
+        copyCore.onlyIf(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                return !finalHasCore;
+            }
+        });
+        copyCore.from(delayedFile("{CORE_DIR_REL}/build/libs").call());
+        copyCore.include(new Spec<FileTreeElement>()
+        {
+            @Override
+            public boolean isSatisfiedBy(FileTreeElement fileTreeElement)
+            {
+                return !fileTreeElement.isDirectory() && fileTreeElement.getName()
+                        .contains(delayedString("{CORE_NAME}").call()) && fileTreeElement.getName().contains(".jar")
+                        && !(fileTreeElement.getName().contains("javadoc") && fileTreeElement.getName()
+                        .contains("sources") && fileTreeElement.getName().contains("deobf") && fileTreeElement.getName()
+                        .contains(".txt"));
+            }
+        });
+        copyCore.setDestinationDir(delayedFile("{CORE_LIB}").call());
+        copyCore.dependsOn(makeCore);
+
+        project.getTasks().getByName("extractUserDev").dependsOn(copyCore);
+        project.getDependencies().add("compile", project.fileTree(delayedString("{CORE_LIB}").call()));
+    }
+
+    public void makeBaublesTask()
+    {
+        try
+        {
+            String baublesMc = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
+            String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
+            String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
+            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project,
+                                                                          "src/main/java/celestibytes/celestialwizardry/reference/Reference"
+                                                                                  +
+                                                                                  ".java",
+                                                                          "BAUBLES_ROOT");
+            String baublesUrl = baublesRoot + baublesFile;
+            final String baublesDest = "libs/" + baublesFile;
+
+            File[] files = delayedFile("libs").call().listFiles();
+            List<File> baubs = new ArrayList<File>();
+            boolean hasUpToDateBaubles = false;
+
+            if (files != null)
+            {
+                for (File file : files)
+                {
+                    if (file.isFile())
+                    {
+                        if (file.getName().contains("Baubles"))
+                        {
+                            if (file.getName().equals(baublesFile))
+                            {
+                                hasUpToDateBaubles = true;
+                            }
+                            else
+                            {
+                                baubs.add(file);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
+
+            for (File file : baubs)
+            {
+                cleanEveryBaubles.delete(file);
+            }
+
+            if (hasUpToDateBaubles)
+            {
+                cleanEveryBaubles.delete(delayedFile(baublesDest).call());
+            }
+
+            cleanEveryBaubles.setDescription(
+                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
+            cleanEveryBaubles.setGroup(Reference.NAME);
+
+            Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
+
+            for (File file : baubs)
+            {
+                cleanBaubles.delete(file);
+            }
+
+            cleanBaubles.setDescription(
+                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
+                            "(excluding the up-to-date one)");
+            cleanBaubles.setGroup(Reference.NAME);
+
+            DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
+            getBaubles.setUrl(delayedString(baublesUrl));
+            getBaubles.setOutput(delayedFile(baublesDest));
+            getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
+            {
+                @Override
+                public boolean isSatisfiedBy(Task task)
+                {
+                    DelayedFile excepted = delayedFile(baublesDest);
+                    return excepted.call().exists() && !excepted.call().isDirectory();
+                }
+            });
+            getBaubles.setDescription("Downloads the correct version of Baubles");
+            getBaubles.setGroup(Reference.NAME);
+            getBaubles.dependsOn(cleanBaubles);
+
+            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
+        }
+        catch (IOException e)
+        {
+            project.getLogger().warn("Failed to get baubles properties");
+            e.printStackTrace();
+        }
     }
 
     public void makeCWPackageTasks()
@@ -300,101 +466,6 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
 
-    public void makeBaublesTask()
-    {
-        try
-        {
-            String baublesMc = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
-            String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
-            String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project,
-                                                                          "src/main/java/celestibytes/celestialwizardry/reference/Reference"
-                                                                                  +
-                                                                                  ".java",
-                                                                          "BAUBLES_ROOT");
-            String baublesUrl = baublesRoot + baublesFile;
-            final String baublesDest = "libs/" + baublesFile;
-
-            File[] files = delayedFile("libs").call().listFiles();
-            List<File> baubs = new ArrayList<File>();
-            boolean hasUpToDateBaubles = false;
-
-            if (files != null)
-            {
-                for (File file : files)
-                {
-                    if (file.isFile())
-                    {
-                        if (file.getName().contains("Baubles"))
-                        {
-                            if (file.getName().equals(baublesFile))
-                            {
-                                hasUpToDateBaubles = true;
-                            }
-                            else
-                            {
-                                baubs.add(file);
-                            }
-                        }
-                    }
-                }
-            }
-
-            Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
-
-            for (File file : baubs)
-            {
-                cleanEveryBaubles.delete(file);
-            }
-
-            if (hasUpToDateBaubles)
-            {
-                cleanEveryBaubles.delete(delayedFile(baublesDest).call());
-            }
-
-            cleanEveryBaubles.setDescription(
-                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
-            cleanEveryBaubles.setGroup(Reference.NAME);
-
-            Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
-
-            for (File file : baubs)
-            {
-                cleanBaubles.delete(file);
-            }
-
-            cleanBaubles.setDescription(
-                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
-                            "(excluding the up-to-date one)");
-            cleanBaubles.setGroup(Reference.NAME);
-
-            DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
-            getBaubles.setUrl(delayedString(baublesUrl));
-            getBaubles.setOutput(delayedFile(baublesDest));
-
-            // TODO If this doesn't work, use onlyIf
-            getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
-            {
-                @Override
-                public boolean isSatisfiedBy(Task task)
-                {
-                    DelayedFile excepted = delayedFile(baublesDest);
-                    return excepted.call().exists() && !excepted.call().isDirectory();
-                }
-            });
-            cleanBaubles.setDescription("Downloads the correct version of Baubles");
-            cleanBaubles.setGroup(Reference.NAME);
-            getBaubles.dependsOn(cleanBaubles);
-
-            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
-        }
-        catch (IOException e)
-        {
-            project.getLogger().warn("Failed to get baubles properties");
-            e.printStackTrace();
-        }
-    }
-
     public void makeLifecycleTasks()
     {
         DefaultTask release = makeTask("release", DefaultTask.class);
@@ -444,6 +515,10 @@ public final class CelestiGradle implements Plugin<Project>, DelayedBase.IDelaye
     public String resolve(String pattern, Project project, BaseExtension extension)
     {
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
+        pattern = pattern.replace("{CORE_DIR_REL}", "./CelestiCore");
+        pattern = pattern.replace("{CORE_DIR}", project.getProjectDir().getAbsolutePath() + "/CelestiCore");
+        pattern = pattern.replace("{CORE_LIB}", delayedString("{CORE_DIR_REL}").call() + "/dep");
+        pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
         return pattern;
     }
 }

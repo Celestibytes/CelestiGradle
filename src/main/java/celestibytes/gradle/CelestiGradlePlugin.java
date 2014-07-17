@@ -517,7 +517,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         pattern = pattern.replace("{CORE_DIR_REL}", "./CelestiCore");
         pattern = pattern.replace("{CORE_DIR}", project.getProjectDir().getAbsolutePath() + "/CelestiCore");
-        pattern = pattern.replace("{CORE_LIB}", delayedString("{CORE_DIR_REL}").call() + "/dep");
+        pattern = pattern.replace("{CORE_LIB}", "./CelestiCore/dep");
         pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
         return pattern;
     }

@@ -109,9 +109,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 Runtime runtime = Runtime.getRuntime();
                 try
                 {
-                    Process process = runtime.exec("gradlew setupCiWorkspace", null, delayedFile("{CORE_DIR}").call());
+                    Process process = runtime.exec("cd " + delayedString("{CORE_DIR_REL}").call());
                     process.waitFor();
-                    process = runtime.exec("gradlew build", null, delayedFile("{CORE_DIR}").call());
+                    process = runtime.exec("gradlew setupCiWorkspace");
+                    process.waitFor();
+                    process = runtime.exec("gradlew build");
+                    process.waitFor();
+                    process = runtime.exec("cd ..");
                     process.waitFor();
                 }
                 catch (IOException e)

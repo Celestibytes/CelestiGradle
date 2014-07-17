@@ -103,8 +103,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             }
         });
         makeCore.setWorkingDir(delayedString("{CORE_DIR_REL}").call());
-        makeCore.commandLine("cmd", "/c", "gradlew.bat build");
-        makeCore.commandLine("gradlew build");
+        makeCore.commandLine("cmd", "/c", "build.bat");
+        makeCore.commandLine("build.sh");
 
         Copy copyCore = makeTask("copyCore", Copy.class);
         copyCore.onlyIf(new Spec<Task>()

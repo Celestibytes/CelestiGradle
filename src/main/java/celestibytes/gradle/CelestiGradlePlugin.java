@@ -27,6 +27,7 @@ import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -91,21 +92,38 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             {
                 Map<String, String> args = Maps.newHashMap();
                 args.put("dir", "./src/main/java/celestibytes/pizzana/version");
-                project.getAnt().invokeMethod("delete", args);
+                invokeAnt("delete", args);
             }
         });
 
-        DefaultTask addVersionDir = makeTask("deleteVersionDir");
+        DefaultTask addVersionDir = makeTask("addVersionDir");
         deleteVersionDir.doLast(new Action<Task>()
         {
             @Override
             public void execute(Task task)
             {
                 Map<String, String> args = Maps.newHashMap();
-                args.put("dir", "./src/main/java/celestibytes/pizzana/version");
-                project.getAnt().invokeMethod("delete", args);
+                args.put("dir", "./temp");
+                invokeAnt("mkdir", args);
+
+                args = Maps.newHashMap();
+                args.put("src", "https://raw.githubusercontent.com/Celestibytes/CelestiGradle/develop/versionfiles.zip");
+                args.put("dest", "./temp/versionfiles.zip");
+                invokeAnt("get", args);
+
+                args = Maps.newHashMap();
+                args.put("src", "./temp/versionfiles.zip");
+                args.put("dest", "./src/main/java");
+                invokeAnt("unzip", args);
+
+                args = Maps.newHashMap();
+                args.put("dir", "./temp");
+                invokeAnt("delete", args);
             }
         });
+        addVersionDir.dependsOn(deleteVersionDir);
+
+        project.getTasks().getByName("extractUserDev").dependsOn(addVersionDir);
     }
 
     public void makeCoreDepTasks()
@@ -120,11 +138,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             String baublesMc = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
             String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project,
-                                                                          "src/main/java/celestibytes/celestialwizardry/reference/Reference"
-                                                                                  +
-                                                                                  ".java",
-                                                                          "BAUBLES_ROOT");
+            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project, "src/main/java/celestibytes/celestialwizardry/reference/Reference.java", "BAUBLES_ROOT");
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 
@@ -316,7 +330,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 args.put("keystore", keystoreLocation.getPath());
                 args.put("alias", keystoreAlias);
                 args.put("storepass", keystorePassword);
-                project.getAnt().invokeMethod("signjar", args);
+                invokeAnt("signjar", args);
             }
         });
         signJar.dependsOn("build");
@@ -434,7 +448,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 args.put("keystore", keystoreLocation.getPath());
                 args.put("alias", keystoreAlias);
                 args.put("storepass", keystorePassword);
-                project.getAnt().invokeMethod("signjar", args);
+                invokeAnt("signjar", args);
             }
         });
         signJar.dependsOn("build");
@@ -467,6 +481,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         map.put("name", name);
         map.put("type", type);
         return (T) proj.task(map, name);
+    }
+
+    public void invokeAnt(String task, Map<String, String> args)
+    {
+        project.getAnt().invokeMethod(task, args);
     }
 
     public void applyExternalPlugin(String plugin)

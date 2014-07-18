@@ -32,17 +32,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiExtension>
+public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiExtension>
 {
     public final String CORE_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
     public final String CORE_DEV_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
 
     public Project project;
     public String projectName;
-    private CelestiExtension extension;
 
     @Override
-    public final void apply(Project project)
+    public void apply(Project project)
     {
         this.project = project;
         projectName = delayedString("{PROJECT}").call();
@@ -57,15 +56,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<Cel
                 addMavenRepo(project, "cbs", Reference.MAVEN);
             }
         });
-
-        apply();
-
-        makeLifecycleTasks();
-    }
-
-    public void apply()
-    {
-        String projectName = delayedString("{PROJECT}").call();
 
         if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
                 .equals(Reference.DGC_NAME.toLowerCase()))
@@ -85,6 +75,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<Cel
             makeCorePackageTasks();
             makeCoreSignTask();
         }
+
+        makeLifecycleTasks();
     }
 
     public void makeCoreDepTasks()
@@ -441,12 +433,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<Cel
 
     private void createExtension()
     {
-        createExtension(Reference.EXTEN, getExtensionClass(), this);
-    }
-
-    protected void createExtension(String name, Class clazz)
-    {
-        createExtension(name, clazz, project);
+        createExtension(Reference.EXTEN, getExtensionClass());
     }
 
     protected void createExtension(String name, Class clazz, Object... params)

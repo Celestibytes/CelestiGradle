@@ -1,5 +1,6 @@
 package net.minecraftforge.gradle.common;
 
+import celestibytes.gradle.reference.Versions;
 import groovy.lang.Closure;
 
 import java.io.File;
@@ -18,7 +19,6 @@ import net.minecraftforge.gradle.tasks.ObtainFernFlowerTask;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 
 import celestibytes.gradle.reference.Reference;
-import celestibytes.gradle.reference.Version;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -394,7 +394,7 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     {
         project.getLogger().lifecycle("****************************");
         project.getLogger().lifecycle(" Welcome to " + Reference.NAME);
-        project.getLogger().lifecycle(" Version " + Version.VERSION);
+        project.getLogger().lifecycle(" Version " + Versions.VERSION);
         project.getLogger().lifecycle(" Based on ForgeGradle       ");
         // project.getLogger().lifecycle("****************************");
     }

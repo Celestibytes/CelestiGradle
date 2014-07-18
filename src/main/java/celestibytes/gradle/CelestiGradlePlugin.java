@@ -46,8 +46,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         this.project = project;
         projectName = project.getName();
         coreVersion = (String) project.property("coreVersion");
-        coreArtifact = "celestibytes.core:CelestiCore:" + coreVersion;
-        coreDevArtifact = "celestibytes.core:CelestiCore:" + coreVersion + ":deobf";
+        coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
+        coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":deobf";
 
         project.allprojects(new Action<Project>()
         {
@@ -134,7 +134,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public void makeCoreDepTasks()
     {
-        project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
+        project.getDependencies().add("compile", delayedString("{CORE_ARTIFACT}").call());
     }
 
     public void makeBaublesTask()

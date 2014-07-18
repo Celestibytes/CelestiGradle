@@ -9,5 +9,5 @@ public final class Reference
     public static final String DGC_NAME = "Doughcraft";
     public static final String CORE_NAME = "CelestiCore";
     
-    public static final String MAVEN = "https://raw.githubusercontent.com/PizzAna/maven/master/releases/";
+    public static final String MAVEN = "http://celestibytes.github.io/maven/";
 }

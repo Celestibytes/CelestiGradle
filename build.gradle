@@ -18,7 +18,7 @@ apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-group = 'celestibytes.gradle'
+group = 'io.github.celestibytes'
 version = getCGVersion(getProject(), "VERSION")
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'

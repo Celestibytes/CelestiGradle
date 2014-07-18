@@ -395,14 +395,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         sources.setExtension("jar");
         project.getArtifacts().add("archives", sources);
 
-        /* Jar api = makeTask("apiJar", Jar.class);
-        api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/core/api/"),
-        new CopyInto("celestibytes/core/api/"));
-        api.dependsOn(jarTask);
-        api.setExtension("jar"); */
-        // TODO project.getArtifacts().add("archives", api);
-
         Jar deobf = makeTask("deobfJar", Jar.class);
         deobf.setClassifier("deobf");
         sources.from(delayedFile(changelogFile));

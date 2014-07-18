@@ -1,19 +1,25 @@
 package celestibytes.gradle;
 
 import net.minecraftforge.gradle.CopyInto;
+import net.minecraftforge.gradle.common.BaseExtension;
 import net.minecraftforge.gradle.delayed.DelayedFile;
+import net.minecraftforge.gradle.delayed.DelayedFileTree;
+import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
-import celestibytes.gradle.common.AbstractPlugin;
 import celestibytes.gradle.reference.Reference;
+import celestibytes.gradle.util.IResolver;
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
 import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
@@ -22,15 +28,41 @@ import org.gradle.api.tasks.bundling.Jar;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class CelestiGradlePlugin extends AbstractPlugin<CelestiExtension>
+public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiExtension>
 {
     public final String CORE_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
     public final String CORE_DEV_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
 
+    public Project project;
+    public String projectName;
+    private CelestiExtension extension;
+
     @Override
+    public final void apply(Project project)
+    {
+        this.project = project;
+        projectName = delayedString("{PROJECT}").call();
+
+        createExtension();
+
+        project.allprojects(new Action<Project>()
+        {
+            @Override
+            public void execute(Project project)
+            {
+                addMavenRepo(project, "cbs", Reference.MAVEN);
+            }
+        });
+
+        apply();
+
+        makeLifecycleTasks();
+    }
+
     public void apply()
     {
         String projectName = delayedString("{PROJECT}").call();
@@ -389,10 +421,115 @@ public final class CelestiGradlePlugin extends AbstractPlugin<CelestiExtension>
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
 
-    @Override
     protected Class<CelestiExtension> getExtensionClass()
     {
         return CelestiExtension.class;
+    }
+
+    public CelestiExtension getExtension()
+    {
+        return (CelestiExtension) project.getExtensions().getByName(Reference.EXTEN);
+    }
+
+    private void makeLifecycleTasks()
+    {
+        DefaultTask release = makeTask("release", DefaultTask.class);
+        release.setDescription("Wrapper task for building release-ready archives.");
+        release.setGroup(Reference.NAME);
+        release.dependsOn("uploadArchives");
+    }
+
+    private void createExtension()
+    {
+        createExtension(Reference.EXTEN, getExtensionClass(), this);
+    }
+
+    protected void createExtension(String name, Class clazz)
+    {
+        createExtension(name, clazz, project);
+    }
+
+    protected void createExtension(String name, Class clazz, Object... params)
+    {
+        project.getExtensions().create(name, clazz, params);
+    }
+
+    public DefaultTask makeTask(String name)
+    {
+        return makeTask(name, DefaultTask.class);
+    }
+
+    public <T extends Task> T makeTask(String name, Class<T> type)
+    {
+        return makeTask(project, name, type);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
+    {
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put("name", name);
+        map.put("type", type);
+        return (T) proj.task(map, name);
+    }
+
+    public void applyExternalPlugin(String plugin)
+    {
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put("plugin", plugin);
+        project.apply(map);
+    }
+
+    public MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
+    {
+        return project.getRepositories().maven(new Action<MavenArtifactRepository>()
+        {
+            @Override
+            public void execute(MavenArtifactRepository repo)
+            {
+                repo.setName(name);
+                repo.setUrl(url);
+            }
+        });
+    }
+
+    public FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
+    {
+        return project.getRepositories().flatDir(new Action<FlatDirectoryArtifactRepository>()
+        {
+            @Override
+            public void execute(FlatDirectoryArtifactRepository repo)
+            {
+                repo.setName(name);
+                repo.dirs(dirs);
+            }
+        });
+    }
+
+    protected DelayedString delayedString(String path)
+    {
+        return new DelayedString(project, path, this);
+    }
+
+    protected DelayedFile delayedFile(String path)
+    {
+        return new DelayedFile(project, path, this);
+    }
+
+    protected DelayedFileTree delayedFileTree(String path)
+    {
+        return new DelayedFileTree(project, path, this);
+    }
+
+    protected DelayedFileTree delayedZipTree(String path)
+    {
+        return new DelayedFileTree(project, path, true, this);
+    }
+
+    @Override
+    public String resolve(String pattern, Project project, BaseExtension extension)
+    {
+        return resolve(pattern, project, getExtension());
     }
 
     @Override
@@ -400,6 +537,9 @@ public final class CelestiGradlePlugin extends AbstractPlugin<CelestiExtension>
     {
         pattern = pattern.replace("{CORE_ARTIFACT}", CORE_ARTIFACT);
         pattern = pattern.replace("{CORE_DEV_ARTIFACT}", CORE_DEV_ARTIFACT);
-        return super.resolve(pattern, project, extension);
+        pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
+        pattern = pattern.replace("{CORE_VERSION}", extension.getVersion());
+        pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
+        return pattern;
     }
 }

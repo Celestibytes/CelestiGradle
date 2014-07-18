@@ -38,14 +38,16 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public String projectName;
     public String coreArtifact;
     public String coreDevArtifact;
+    public String coreVersion;
 
     @Override
     public void apply(Project project)
     {
         this.project = project;
-        projectName = delayedString("{PROJECT}").call();
-        coreArtifact = "celestibytes.core:CelestiCore:" + project.getProperties().get("coreVersion");
-        coreDevArtifact = "celestibytes.core:CelestiCore:" + project.getProperties().get("coreVersion") + ":deobf";
+        projectName = project.getName();
+        coreVersion = (String) project.property("coreVersion");
+        coreArtifact = "celestibytes.core:CelestiCore:" + coreVersion;
+        coreDevArtifact = "celestibytes.core:CelestiCore:" + coreVersion + ":deobf";
 
         project.allprojects(new Action<Project>()
         {
@@ -498,7 +500,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         pattern = pattern.replace("{CORE_ARTIFACT}", coreArtifact);
         pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
-        pattern = pattern.replace("{CORE_VERSION}", extension.getVersion());
+        pattern = pattern.replace("{CORE_VERSION}", coreVersion);
         pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
         return pattern;
     }

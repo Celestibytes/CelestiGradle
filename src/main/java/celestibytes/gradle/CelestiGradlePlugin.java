@@ -34,11 +34,10 @@ import java.util.Map;
 
 public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiExtension>
 {
-    public final String CORE_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
-    public final String CORE_DEV_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
-
     public Project project;
     public String projectName;
+    public String coreArtifact;
+    public String coreDevArtifact;
 
     @Override
     public void apply(Project project)
@@ -47,6 +46,9 @@ public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiEx
         projectName = delayedString("{PROJECT}").call();
 
         createExtension();
+
+        coreArtifact = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
+        coreDevArtifact = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
 
         project.allprojects(new Action<Project>()
         {
@@ -522,8 +524,8 @@ public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiEx
     @Override
     public String resolve(String pattern, Project project, CelestiExtension extension)
     {
-        pattern = pattern.replace("{CORE_ARTIFACT}", CORE_ARTIFACT);
-        pattern = pattern.replace("{CORE_DEV_ARTIFACT}", CORE_DEV_ARTIFACT);
+        pattern = pattern.replace("{CORE_ARTIFACT}", coreArtifact);
+        pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         pattern = pattern.replace("{CORE_VERSION}", extension.getVersion());
         pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);

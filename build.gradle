@@ -7,7 +7,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'io.github.pizzana:JKaffe:1.2.0'
+        classpath 'io.github.pizzana:JKaffe:1.2.3'
     }
 }
 
@@ -95,7 +95,7 @@ dependencies {
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // JKaffe
-    compile 'io.github.pizzana:JKaffe:1.2.0'
+    compile 'io.github.pizzana:JKaffe:1.2.3'
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"

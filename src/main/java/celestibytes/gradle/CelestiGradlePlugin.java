@@ -1,51 +1,39 @@
 package celestibytes.gradle;
 
 import net.minecraftforge.gradle.CopyInto;
-import net.minecraftforge.gradle.common.BaseExtension;
-import net.minecraftforge.gradle.common.BasePlugin;
-import net.minecraftforge.gradle.delayed.DelayedBase;
 import net.minecraftforge.gradle.delayed.DelayedFile;
-import net.minecraftforge.gradle.delayed.DelayedFileTree;
-import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
+import celestibytes.gradle.common.AbstractPlugin;
 import celestibytes.gradle.reference.Reference;
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
 import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
-import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.file.FileTreeElement;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
-import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
+public final class CelestiGradlePlugin extends AbstractPlugin<CelestiExtension>
 {
-    private Project project;
-    // private String projectName;
+    public final String CORE_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
+    public final String CORE_DEV_ARTIFACT = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
 
     @Override
-    public void apply(Project project)
+    public void apply()
     {
-        this.project = project;
-        // projectName = project.getName();
         String projectName = delayedString("{PROJECT}").call();
-
-        // applyExternalPlugin("forge");
 
         if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
                 .equals(Reference.DGC_NAME.toLowerCase()))
@@ -63,102 +51,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (projectName.toLowerCase().equals(Reference.CORE_NAME.toLowerCase()))
         {
             makeCorePackageTasks();
-            // TODO makeCoreSignTask();
+            makeCoreSignTask();
         }
-
-        makeLifecycleTasks();
     }
 
     public void makeCoreDepTasks()
     {
-        boolean hasCore = false;
-        File[] files = delayedFile("{CORE_LIB}").call().listFiles();
-
-        if (files != null)
-        {
-            for (File file : files)
-            {
-                if (file.isFile())
-                {
-                    if (file.getName().contains(delayedString("{CORE_NAME}").call()) && file.getName().contains(".jar"))
-                    {
-                        hasCore = true;
-                    }
-                }
-            }
-        }
-
-        DefaultTask makeCore = makeTask("makeCore", DefaultTask.class);
-        makeCore.setDescription(
-                delayedString("Makes sure that there is a correct version of {CORE_NAME} available").call());
-        makeCore.setGroup(Reference.NAME);
-        final boolean finalHasCore = hasCore;
-        makeCore.onlyIf(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                return !finalHasCore;
-            }
-        });
-        makeCore.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Runtime runtime = Runtime.getRuntime();
-                try
-                {
-                    File workingDir = delayedFile("{CORE_DIR}").call();
-                    String gradle = workingDir.getAbsolutePath() + "/gradlew";
-                    String win = "cmd /c";
-                    Process process = runtime.exec(new String[]{gradle, "setupDecompWorkspace"}, null, workingDir);
-                    process.waitFor();
-                    process = runtime.exec(new String[]{win, gradle, "setupDecompWorkspace"}, null, workingDir);
-                    process.waitFor();
-                    process = runtime.exec(new String[]{gradle, "build"}, null, workingDir);
-                    process.waitFor();
-                    process = runtime.exec(new String[]{win, gradle, "build"}, null, workingDir);
-                    process.waitFor();
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-                catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        Copy copyCore = makeTask("copyCore", Copy.class);
-        copyCore.onlyIf(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                return !finalHasCore;
-            }
-        });
-        copyCore.from(delayedFile("{CORE_DIR_REL}/build/libs").call());
-        copyCore.include(new Spec<FileTreeElement>()
-        {
-            @Override
-            public boolean isSatisfiedBy(FileTreeElement fileTreeElement)
-            {
-                return !fileTreeElement.isDirectory() && fileTreeElement.getName()
-                        .contains(delayedString("{CORE_NAME}").call()) && fileTreeElement.getName().contains(".jar")
-                        && !(fileTreeElement.getName().contains("javadoc") && fileTreeElement.getName()
-                        .contains("sources") && fileTreeElement.getName().contains("deobf") && fileTreeElement.getName()
-                        .contains(".txt"));
-            }
-        });
-        copyCore.setDestinationDir(delayedFile("{CORE_LIB}").call());
-        copyCore.dependsOn(makeCore);
-
-        project.getTasks().getByName("extractUserDev").dependsOn(copyCore);
-        project.getDependencies().add("compile", project.fileTree(delayedString("{CORE_LIB}").call()));
+        project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
     }
 
     public void makeBaublesTask()
@@ -315,8 +214,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         api.setClassifier("api");
         api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/celestialwizardry/api/"),
                  new CopyInto("celestibytes/celestialwizardry/api/"));
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/celestialwizardry/crystal/api/"),
-                 new CopyInto("celestibytes/celestialwizardry/crystal/api/"));
         api.dependsOn(jarTask);
         api.setExtension("jar");
         project.getArtifacts().add("archives", api);
@@ -492,59 +389,17 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
 
-    public void makeLifecycleTasks()
+    @Override
+    protected Class<CelestiExtension> getExtensionClass()
     {
-        DefaultTask release = makeTask("release", DefaultTask.class);
-        release.setDescription("Wrapper task for building release-ready archives.");
-        release.setGroup(Reference.NAME);
-        release.dependsOn("uploadArchives");
-    }
-
-    public DefaultTask makeTask(String name)
-    {
-        return makeTask(name, DefaultTask.class);
-    }
-
-    public <T extends Task> T makeTask(String name, Class<T> type)
-    {
-        return BasePlugin.makeTask(project, name, type);
-    }
-
-    public void applyExternalPlugin(String plugin)
-    {
-        HashMap<String, Object> map = new HashMap<String, Object>();
-        map.put("plugin", plugin);
-        project.apply(map);
-    }
-
-    protected DelayedString delayedString(String path)
-    {
-        return new DelayedString(project, path, this);
-    }
-
-    protected DelayedFile delayedFile(String path)
-    {
-        return new DelayedFile(project, path, this);
-    }
-
-    protected DelayedFileTree delayedFileTree(String path)
-    {
-        return new DelayedFileTree(project, path, this);
-    }
-
-    protected DelayedFileTree delayedZipTree(String path)
-    {
-        return new DelayedFileTree(project, path, true, this);
+        return CelestiExtension.class;
     }
 
     @Override
-    public String resolve(String pattern, Project project, BaseExtension extension)
+    public String resolve(String pattern, Project project, CelestiExtension extension)
     {
-        pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
-        pattern = pattern.replace("{CORE_DIR_REL}", "./CelestiCore");
-        pattern = pattern.replace("{CORE_DIR}", project.getProjectDir().getAbsolutePath().replace('\\', '/') + "/CelestiCore");
-        pattern = pattern.replace("{CORE_LIB}", "./CelestiCore/dep");
-        pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
-        return pattern;
+        pattern = pattern.replace("{CORE_ARTIFACT}", CORE_ARTIFACT);
+        pattern = pattern.replace("{CORE_DEV_ARTIFACT}", CORE_DEV_ARTIFACT);
+        return super.resolve(pattern, project, extension);
     }
 }

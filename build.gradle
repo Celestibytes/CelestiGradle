@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
         maven {
             name = "cbs"
-            url = "https://raw.githubusercontent.com/PizzAna/maven/master/releases/"
+            url = "http://celestibytes.github.io/maven/"
         }
     }
     dependencies {

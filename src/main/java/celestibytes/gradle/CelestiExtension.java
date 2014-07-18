@@ -1,12 +1,20 @@
 package celestibytes.gradle;
 
-import celestibytes.gradle.common.AbstractExtension;
-import celestibytes.gradle.common.AbstractPlugin;
-
-public class CelestiExtension extends AbstractExtension
+public class CelestiExtension
 {
-    public CelestiExtension(AbstractPlugin<? extends AbstractExtension> plugin)
+    protected String version = "null";
+
+    public CelestiExtension()
     {
-        super(plugin);
+    }
+
+    public String getVersion()
+    {
+        return version;
+    }
+
+    public void setVersion(String version)
+    {
+        this.version = version;
     }
 }

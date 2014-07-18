@@ -2,6 +2,7 @@ package celestibytes.gradle;
 
 import net.minecraftforge.gradle.CopyInto;
 import net.minecraftforge.gradle.common.BaseExtension;
+import net.minecraftforge.gradle.delayed.DelayedBase;
 import net.minecraftforge.gradle.delayed.DelayedFile;
 import net.minecraftforge.gradle.delayed.DelayedFileTree;
 import net.minecraftforge.gradle.delayed.DelayedString;
@@ -9,7 +10,6 @@ import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
 import celestibytes.gradle.reference.Reference;
-import celestibytes.gradle.util.IResolver;
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
 import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiExtension>
+public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
     public Project project;
     public String projectName;
@@ -45,10 +45,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<Cel
         this.project = project;
         projectName = delayedString("{PROJECT}").call();
 
-        createExtension();
-
-        coreArtifact = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
-        coreDevArtifact = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
+        coreArtifact = "celestibytes.core:CelestiCore:" + project.getProperties().get("coreVersion");
+        coreDevArtifact = "celestibytes.core:CelestiCore:" + project.getProperties().get("coreVersion") + ":deobf";
 
         project.allprojects(new Action<Project>()
         {
@@ -422,37 +420,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<Cel
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
 
-    protected Class<CelestiExtension> getExtensionClass()
-    {
-        return CelestiExtension.class;
-    }
-
-    public CelestiExtension getExtension()
-    {
-        return (CelestiExtension) project.getExtensions().getByName(Reference.EXTEN);
-    }
-
     private void makeLifecycleTasks()
     {
         DefaultTask release = makeTask("release", DefaultTask.class);
         release.setDescription("Wrapper task for building release-ready archives.");
         release.setGroup(Reference.NAME);
         release.dependsOn("uploadArchives");
-    }
-
-    private void createExtension()
-    {
-        createExtension(Reference.EXTEN, getExtensionClass(), this);
-    }
-
-    protected void createExtension(String name, Class clazz)
-    {
-        createExtension(name, clazz, project);
-    }
-
-    protected void createExtension(String name, Class clazz, Object... params)
-    {
-        project.getExtensions().create(name, clazz, params);
     }
 
     public DefaultTask makeTask(String name)
@@ -529,12 +502,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, IResolver<Cel
 
     @Override
     public String resolve(String pattern, Project project, BaseExtension extension)
-    {
-        return resolve(pattern, project, getExtension());
-    }
-
-    @Override
-    public String resolve(String pattern, Project project, CelestiExtension extension)
     {
         pattern = pattern.replace("{CORE_ARTIFACT}", coreArtifact);
         pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);

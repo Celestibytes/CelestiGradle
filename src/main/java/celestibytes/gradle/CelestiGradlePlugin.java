@@ -38,15 +38,16 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public String projectName;
     public String coreArtifact;
     public String coreDevArtifact;
+    public String coreVersion;
 
     @Override
-    public final void apply(Project project)
+    public void apply(Project project)
     {
         this.project = project;
-        projectName = delayedString("{PROJECT}").call();
-
-        coreArtifact = "celestibytes.core:CelestiCore:" + project.getProperties().get("coreVersion");
-        coreDevArtifact = "celestibytes.core:CelestiCore:" + project.getProperties().get("coreVersion") + ":deobf";
+        projectName = project.getName();
+        coreVersion = (String) project.property("coreVersion");
+        coreArtifact = "celestibytes.core:CelestiCore:" + coreVersion;
+        coreDevArtifact = "celestibytes.core:CelestiCore:" + coreVersion + ":deobf";
 
         project.allprojects(new Action<Project>()
         {
@@ -56,15 +57,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 addMavenRepo(project, "cbs", Reference.MAVEN);
             }
         });
-
-        apply();
-
-        makeLifecycleTasks();
-    }
-
-    public void apply()
-    {
-        String projectName = delayedString("{PROJECT}").call();
 
         if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
                 .equals(Reference.DGC_NAME.toLowerCase()))
@@ -84,6 +76,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             makeCorePackageTasks();
             makeCoreSignTask();
         }
+
+        makeLifecycleTasks();
     }
 
     public void makeCoreDepTasks()
@@ -506,7 +500,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         pattern = pattern.replace("{CORE_ARTIFACT}", coreArtifact);
         pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
-        pattern = pattern.replace("{CORE_VERSION}", extension.getVersion());
+        pattern = pattern.replace("{CORE_VERSION}", coreVersion);
         pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
         return pattern;
     }

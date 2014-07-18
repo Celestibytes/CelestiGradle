@@ -45,7 +45,7 @@ public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiEx
         this.project = project;
         projectName = delayedString("{PROJECT}").call();
 
-        createExtension();
+        project.getExtensions().create(Reference.EXTEN, CelestiExtension.class, this);
 
         coreArtifact = "celestibytes.core:CelestiCore:" + getExtension().getVersion();
         coreDevArtifact = "celestibytes.core:CelestiCore:" + getExtension().getVersion() + ":deobf";
@@ -415,11 +415,6 @@ public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiEx
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
 
-    protected Class<CelestiExtension> getExtensionClass()
-    {
-        return CelestiExtension.class;
-    }
-
     public CelestiExtension getExtension()
     {
         return (CelestiExtension) project.getExtensions().getByName(Reference.EXTEN);
@@ -431,16 +426,6 @@ public class CelestiGradlePlugin implements Plugin<Project>, IResolver<CelestiEx
         release.setDescription("Wrapper task for building release-ready archives.");
         release.setGroup(Reference.NAME);
         release.dependsOn("uploadArchives");
-    }
-
-    private void createExtension()
-    {
-        createExtension(Reference.EXTEN, getExtensionClass());
-    }
-
-    protected void createExtension(String name, Class clazz, Object... params)
-    {
-        project.getExtensions().create(name, clazz, params);
     }
 
     public DefaultTask makeTask(String name)

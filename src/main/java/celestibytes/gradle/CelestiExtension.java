@@ -4,7 +4,7 @@ public class CelestiExtension
 {
     protected String version = "null";
 
-    public CelestiExtension()
+    public CelestiExtension(CelestiGradlePlugin plugin)
     {
     }
 

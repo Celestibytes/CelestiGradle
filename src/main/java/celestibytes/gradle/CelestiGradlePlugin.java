@@ -253,7 +253,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         sources.from(delayedFile("LICENSE"));
         deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
         deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
+        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
         deobf.manifest(commonManifest);
         deobf.dependsOn(jarTask);
         deobf.setExtension("jar");
@@ -372,7 +372,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         sources.from(delayedFile("LICENSE"));
         deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
         deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
+        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
         deobf.manifest(commonManifest);
         deobf.dependsOn(jarTask);
         deobf.setExtension("jar");
@@ -483,7 +483,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         sources.from(delayedFile("LICENSE"));
         deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
         deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
+        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
         deobf.manifest(commonManifest);
         deobf.dependsOn(jarTask);
         deobf.setExtension("jar");

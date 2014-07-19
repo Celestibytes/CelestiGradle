@@ -88,7 +88,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public void addCoreDep()
     {
-        project.getDependencies().add("compile", delayedString("{CORE_ARTIFACT}").call());
+        project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
     }
 
     public void makeBaublesTask()

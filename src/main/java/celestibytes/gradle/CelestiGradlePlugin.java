@@ -61,7 +61,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
                 .equals(Reference.DGC_NAME.toLowerCase()))
         {
-            makeCoreDepTasks();
+            addCoreDep();
         }
 
         if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()))
@@ -79,7 +79,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         if (projectName.toLowerCase().equals(Reference.CORE_NAME.toLowerCase()))
         {
-            makeAddVersionTasks();
             makeCorePackageTasks();
             makeCoreSignTask();
         }
@@ -87,52 +86,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         makeLifecycleTasks();
     }
 
-    private void makeAddVersionTasks()
-    {
-        DefaultTask deleteVersionDir = makeTask("deleteVersionDir");
-        deleteVersionDir.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("dir", "./src/main/java/celestibytes/pizzana/version");
-                invokeAnt("delete", args);
-            }
-        });
-
-        DefaultTask addVersionDir = makeTask("addVersionDir");
-        deleteVersionDir.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("dir", "./temp");
-                invokeAnt("mkdir", args);
-
-                args = Maps.newHashMap();
-                args.put("src",
-                         "https://raw.githubusercontent.com/Celestibytes/CelestiGradle/develop/versionfiles.zip");
-                args.put("dest", "./temp/versionfiles.zip");
-                invokeAnt("get", args);
-
-                args = Maps.newHashMap();
-                args.put("src", "./temp/versionfiles.zip");
-                args.put("dest", "./src/main/java");
-                invokeAnt("unzip", args);
-
-                args = Maps.newHashMap();
-                args.put("dir", "./temp");
-                invokeAnt("delete", args);
-            }
-        });
-        addVersionDir.dependsOn(deleteVersionDir);
-
-        project.getTasks().getByName("extractUserDev").dependsOn(addVersionDir);
-    }
-
-    public void makeCoreDepTasks()
+    public void addCoreDep()
     {
         project.getDependencies().add("compile", delayedString("{CORE_ARTIFACT}").call());
     }

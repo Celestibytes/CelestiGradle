@@ -35,12 +35,19 @@ import java.util.Map;
 
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
-    public Project project;
-    public String projectName;
-    public boolean core;
-    public String coreArtifact;
-    public String coreDevArtifact;
-    public String coreVersion;
+    private Project project;
+    private String projectName;
+
+    private boolean core;
+    private String coreArtifact;
+    private String coreDevArtifact;
+    private String coreVersion;
+
+    private String basePackage;
+    private Closure manifest;
+
+    private boolean addManifest;
+    private String dir;
 
     @Override
     public void apply(Project project)
@@ -87,6 +94,28 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
             coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
         }
+
+        if (project.hasProperty("basePackage"))
+        {
+            basePackage = (String) project.property("basePackage");
+        }
+        else
+        {
+            throw new NullPointerException("No String property \"basePackage\" found from the project.");
+        }
+
+        if (project.hasProperty("manifest"))
+        {
+            manifest = (Closure) project.property("manifest");
+        }
+        else
+        {
+            manifest = null;
+        }
+
+        // Always last
+        addManifest = manifest != null;
+        dir = basePackage.replace('.', '/');
     }
 
     private void addRepositories()
@@ -119,7 +148,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
         {
-            makePackageTasks(artifacts, "celestibytes.core");
+            makePackageTasks(artifacts);
             makeSignTask();
         }
 
@@ -129,7 +158,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             makeBaublesTask();
 
-            Closure<Object> manifest = new Closure<Object>(project)
+            // TODO Remove
+            manifest = new Closure<Object>(project)
             {
                 @Override
                 public Object call()
@@ -142,13 +172,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 }
             };
 
-            makePackageTasks(artifacts, manifest, "celestibytes.celestialwizardry");
+            makePackageTasks(artifacts);
             makeSignTask();
         }
 
         if (projectName.toLowerCase().equals(Projects.DGC.toLowerCase()))
         {
-            makePackageTasks(artifacts, "pizzana.doughcraft");
+            makePackageTasks(artifacts);
             makeSignTask();
         }
     }
@@ -160,9 +190,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             String baublesMc = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
             String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = ProjectPropertyHelper.Source
-                    .getProperty(project, "src/main/java/celestibytes/celestialwizardry/reference/Reference.java",
-                                 "BAUBLES_ROOT");
+            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project, "src/main/java/" + dir
+                    + "/reference/Reference.java", "BAUBLES_ROOT");
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 
@@ -244,16 +273,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
-    private void makePackageTasks(List<String> artifacts, String basePackage)
+    private void makePackageTasks(List<String> artifacts)
     {
-        makePackageTasks(artifacts, null, basePackage);
-    }
-
-    private void makePackageTasks(List<String> artifacts, Closure manifest, String basePackage)
-    {
-        boolean addManifest = manifest != null;
-        String dir = basePackage.replace('.', '/');
-
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
 
         ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);

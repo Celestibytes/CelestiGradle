@@ -2,11 +2,11 @@ package celestibytes.pizzana.version;
 
 public final class Version implements Comparable<Version>
 {
-    private final int major;
-    private final int minor;
-    private final int patch;
+    public final int major;
+    public final int minor;
+    public final int patch;
     private final Channel channel;
-    private final int number;
+    public final int number;
     private String description = "";
 
     public Version(String major, String minor, String patch)

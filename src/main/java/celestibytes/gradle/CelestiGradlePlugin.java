@@ -87,7 +87,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         this.project = project;
         projectName = project.getName();
         jsonName = projectName.toLowerCase();
-        version = Version.parse((String) project.getVersion());
+        version = Version.parse((String) project.property("versionNumber"));
 
         displayBanner();
 
@@ -189,7 +189,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         else
         {
-            filesmaven = ".";
+            filesmaven = "./files";
         }
 
         if (project.hasProperty("versionCheck"))

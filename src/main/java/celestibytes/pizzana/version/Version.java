@@ -7,7 +7,7 @@ public final class Version implements Comparable<Version>
     public final int patch;
     private final Channel channel;
     public final int number;
-    private String description = "";
+    private String[] description = {};
 
     public Version(String major, String minor, String patch)
     {
@@ -114,12 +114,12 @@ public final class Version implements Comparable<Version>
         return channel;
     }
 
-    public String getDescription()
+    public String[] getDescription()
     {
         return description;
     }
 
-    public void setDescription(String description)
+    public void setDescription(String[] description)
     {
         this.description = description;
     }

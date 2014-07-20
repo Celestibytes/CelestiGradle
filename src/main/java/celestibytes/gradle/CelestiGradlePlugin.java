@@ -484,43 +484,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             Map<String, Object> modNode = newMap();
             Map<String, Object> minecraftNode = newMap();
             Map<String, Object> channelsNode = newMap();
-            Map<String, Object> stable = newMap();
-            Map<String, Object> latest = newMap();
 
-            // TODO Description
-            if (isStable)
-            {
-                stable.put("major", version.major);
-                stable.put("minor", version.minor);
-                stable.put("patch", version.patch);
-                stable.put("description", "");
-
-                latest.put("major", 0);
-                latest.put("minor", 0);
-                latest.put("patch", 0);
-                latest.put("postfix", null);
-                latest.put("number", 0);
-                latest.put("description", "");
-            }
-            else
-            {
-                latest.put("major", version.major);
-                latest.put("minor", version.minor);
-                latest.put("patch", version.patch);
-                latest.put("postfix", version.getChannel().getKey());
-                latest.put("number", version.number);
-                latest.put("description", "");
-
-                stable.put("major", 0);
-                stable.put("minor", 0);
-                stable.put("patch", 0);
-                stable.put("description", "");
-            }
-
-            channelsNode.put("stable", stable);
-            channelsNode.put("latest", latest);
-
-            minecraftNode.put("channels", channelsNode);
+            minecraftNode.put("channels", initChannels(channelsNode));
 
             modNode.put(minecraftVersion, minecraftNode);
 
@@ -536,43 +501,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
                 Map<String, Object> minecraftNode = newMap();
                 Map<String, Object> channelsNode = newMap();
-                Map<String, Object> stable = newMap();
-                Map<String, Object> latest = newMap();
 
-                // TODO Description
-                if (isStable)
-                {
-                    stable.put("major", version.major);
-                    stable.put("minor", version.minor);
-                    stable.put("patch", version.patch);
-                    stable.put("description", "");
-
-                    latest.put("major", 0);
-                    latest.put("minor", 0);
-                    latest.put("patch", 0);
-                    latest.put("postfix", null);
-                    latest.put("number", 0);
-                    latest.put("description", "");
-                }
-                else
-                {
-                    latest.put("major", version.major);
-                    latest.put("minor", version.minor);
-                    latest.put("patch", version.patch);
-                    latest.put("postfix", version.getChannel().getKey());
-                    latest.put("number", version.number);
-                    latest.put("description", "");
-
-                    stable.put("major", 0);
-                    stable.put("minor", 0);
-                    stable.put("patch", 0);
-                    stable.put("description", "");
-                }
-
-                channelsNode.put("stable", stable);
-                channelsNode.put("latest", latest);
-
-                minecraftNode.put("channels", channelsNode);
+                minecraftNode.put("channels", initChannels(channelsNode));
 
                 modNode.put(minecraftVersion, minecraftNode);
 
@@ -587,43 +517,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     minecraftNode.remove("channels");
 
                     Map<String, Object> channelsNode = newMap();
-                    Map<String, Object> stable = newMap();
-                    Map<String, Object> latest = newMap();
 
-                    // TODO Description
-                    if (isStable)
-                    {
-                        stable.put("major", version.major);
-                        stable.put("minor", version.minor);
-                        stable.put("patch", version.patch);
-                        stable.put("description", "");
-
-                        latest.put("major", 0);
-                        latest.put("minor", 0);
-                        latest.put("patch", 0);
-                        latest.put("postfix", null);
-                        latest.put("number", 0);
-                        latest.put("description", "");
-                    }
-                    else
-                    {
-                        latest.put("major", version.major);
-                        latest.put("minor", version.minor);
-                        latest.put("patch", version.patch);
-                        latest.put("postfix", version.getChannel().getKey());
-                        latest.put("number", version.number);
-                        latest.put("description", "");
-
-                        stable.put("major", 0);
-                        stable.put("minor", 0);
-                        stable.put("patch", 0);
-                        stable.put("description", "");
-                    }
-
-                    channelsNode.put("stable", stable);
-                    channelsNode.put("latest", latest);
-
-                    minecraftNode.put("channels", channelsNode);
+                    minecraftNode.put("channels", initChannels(channelsNode));
 
                     modNode.put(minecraftVersion, minecraftNode);
 
@@ -637,25 +532,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     {
                         channelsNode.remove("stable");
 
-                        Map<String, Object> stable = newMap();
-
-                        // TODO Description
-                        if (isStable)
-                        {
-                            stable.put("major", version.major);
-                            stable.put("minor", version.minor);
-                            stable.put("patch", version.patch);
-                            stable.put("description", "");
-                        }
-                        else
-                        {
-                            stable.put("major", 0);
-                            stable.put("minor", 0);
-                            stable.put("patch", 0);
-                            stable.put("description", "");
-                        }
-
-                        channelsNode.put("stable", stable);
+                        channelsNode.put("stable", initStable());
 
                         minecraftNode.put("channels", channelsNode);
 
@@ -665,17 +542,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     }
                     else
                     {
-                        // TODO Description
                         if (isStable)
                         {
                             Map<String, Object> stable = (Map<String, Object>) channelsNode.get("stable");
 
-                            stable.put("major", version.major);
-                            stable.put("minor", version.minor);
-                            stable.put("patch", version.patch);
-                            stable.put("description", "");
-
-                            channelsNode.put("stable", stable);
+                            channelsNode.put("stable", processStable(stable));
 
                             minecraftNode.put("channels", channelsNode);
 
@@ -689,29 +560,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     {
                         channelsNode.remove("latest");
 
-                        Map<String, Object> latest = newMap();
-
-                        // TODO Description
-                        if (isStable)
-                        {
-                            latest.put("major", 0);
-                            latest.put("minor", 0);
-                            latest.put("patch", 0);
-                            latest.put("postfix", null);
-                            latest.put("number", 0);
-                            latest.put("description", "");
-                        }
-                        else
-                        {
-                            latest.put("major", version.major);
-                            latest.put("minor", version.minor);
-                            latest.put("patch", version.patch);
-                            latest.put("postfix", version.getChannel().getKey());
-                            latest.put("number", version.number);
-                            latest.put("description", "");
-                        }
-
-                        channelsNode.put("latest", latest);
+                        channelsNode.put("latest", initLatest());
 
                         minecraftNode.put("channels", channelsNode);
 
@@ -721,19 +570,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     }
                     else
                     {
-                        // TODO Description
                         if (!isStable)
                         {
                             Map<String, Object> latest = (Map<String, Object>) channelsNode.get("latest");
 
-                            latest.put("major", version.major);
-                            latest.put("minor", version.minor);
-                            latest.put("patch", version.patch);
-                            latest.put("postfix", version.getChannel().getKey());
-                            latest.put("number", version.number);
-                            latest.put("description", "");
-
-                            channelsNode.put("latest", latest);
+                            channelsNode.put("latest", processLatest(latest));
 
                             minecraftNode.put("channels", channelsNode);
 
@@ -753,6 +594,74 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         File json = project.file(filesmaven + "/data.json");
 
         FileUtils.writeStringToFile(json, new Gson().toJson(data));
+    }
+
+    private Map<String, Object> initChannels(Map<String, Object> channelsNode)
+    {
+        channelsNode.put("stable", initStable());
+        channelsNode.put("latest", initLatest());
+
+        return channelsNode;
+    }
+
+    private Map<String, Object> initStable()
+    {
+        Map<String, Object> stable = newMap();
+
+        return processStable(stable);
+    }
+
+    private Map<String, Object> processStable(Map<String, Object> stable)
+    {
+        // TODO Description
+        if (isStable)
+        {
+            stable.put("major", version.major);
+            stable.put("minor", version.minor);
+            stable.put("patch", version.patch);
+            stable.put("description", "");
+        }
+        else
+        {
+            stable.put("major", 0);
+            stable.put("minor", 0);
+            stable.put("patch", 0);
+            stable.put("description", "");
+        }
+
+        return stable;
+    }
+
+    private Map<String, Object> initLatest()
+    {
+        Map<String, Object> latest = newMap();
+
+        return processLatest(latest);
+    }
+
+    private Map<String, Object> processLatest(Map<String, Object> latest)
+    {
+        // TODO Description
+        if (isStable)
+        {
+            latest.put("major", 0);
+            latest.put("minor", 0);
+            latest.put("patch", 0);
+            latest.put("postfix", null);
+            latest.put("number", 0);
+            latest.put("description", "");
+        }
+        else
+        {
+            latest.put("major", version.major);
+            latest.put("minor", version.minor);
+            latest.put("patch", version.patch);
+            latest.put("postfix", version.getChannel().getKey());
+            latest.put("number", version.number);
+            latest.put("description", "");
+        }
+
+        return latest;
     }
 
     private <K, V> Map<K, V> newMap()

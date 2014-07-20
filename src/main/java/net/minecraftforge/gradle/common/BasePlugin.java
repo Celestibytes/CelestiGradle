@@ -1,5 +1,6 @@
 package net.minecraftforge.gradle.common;
 
+import celestibytes.gradle.CelestiGradlePlugin;
 import celestibytes.gradle.reference.Versions;
 import groovy.lang.Closure;
 
@@ -145,9 +146,9 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
         if (!displayBanner)
             return;
 
-        // CG START
-        displayCGBanner();
-        // CG END
+        // CG PATCH START ////////////////////////////////////////////////////////////
+        CelestiGradlePlugin.displayBanner();
+        // CG PATCH END ////////////////////////////////////////////////////////////
 
         project.getLogger().lifecycle("****************************");
         project.getLogger().lifecycle(" Powered By MCP:            ");
@@ -388,15 +389,6 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
     protected DelayedFileTree delayedZipTree(String path)
     {
         return new DelayedFileTree(project, path, true, this);
-    }
-
-    private void displayCGBanner()
-    {
-        project.getLogger().lifecycle("****************************");
-        project.getLogger().lifecycle(" Welcome to " + Reference.NAME);
-        project.getLogger().lifecycle(" Version " + Versions.VERSION);
-        project.getLogger().lifecycle(" Based on ForgeGradle       ");
-        // project.getLogger().lifecycle("****************************");
     }
 
 }

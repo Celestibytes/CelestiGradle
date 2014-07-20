@@ -9,10 +9,16 @@ import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
+import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
+import celestibytes.gradle.reference.Versions;
+import celestibytes.pizzana.version.Version;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
+import com.google.gson.Gson;
 import groovy.lang.Closure;
 import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
+import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -27,6 +33,9 @@ import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,21 +43,170 @@ import java.util.Map;
 
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
-    public Project project;
-    public String projectName;
-    public String coreArtifact;
-    public String coreDevArtifact;
-    public String coreVersion;
+    private static final String CHANNELS = "channels";
+    private static final String STABLE = "stable";
+    private static final String LATEST = "latest";
+    private static final String MAJOR = "major";
+    private static final String MINOR = "minor";
+    private static final String PATCH = "patch";
+    private static final String POSTFIX = "postfix";
+    private static final String NUMBER = "number";
+    private static final String DESCRIPTION = "description";
+
+    private static Project projectStatic;
+    private static boolean fg;
+
+    private Project project;
+    private String projectName;
+
+    private boolean core;
+    private String coreArtifact;
+    private String coreDevArtifact;
+    private String coreVersion;
+
+    private String basePackage;
+    private List<String> artifactsList;
+    private Closure manifest;
+    private boolean hasKeystore;
+
+    private String filesmaven;
+
+    private boolean addManifest;
+    private String dir;
+
+    private boolean versionCheck;
+    private String jsonName;
+    private Version version;
+    private boolean isStable;
+    private String minecraftVersion;
 
     @Override
     public void apply(Project project)
     {
+        projectStatic = project;
+        fg = project.getPlugins().hasPlugin("forge");
         this.project = project;
         projectName = project.getName();
-        coreVersion = (String) project.property("coreVersion");
-        coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
-        coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":deobf";
+        jsonName = projectName.toLowerCase();
+        version = Version.parse((String) project.getVersion());
 
+        applyPlugins();
+        resolveProperties();
+        addRepositories();
+        addDependencies();
+        makeProjectTasks();
+        makeLifecycleTasks();
+    }
+
+    private void applyPlugins()
+    {
+        if (!fg)
+        {
+            applyExternalPlugin("java");
+            applyExternalPlugin("maven");
+            applyExternalPlugin("eclipse");
+            applyExternalPlugin("idea");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void resolveProperties()
+    {
+        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
+        {
+            core = false;
+        }
+        else
+        {
+            if (project.hasProperty("core"))
+            {
+                core = (Boolean) project.property("core");
+            }
+            else
+            {
+                throw new NullPointerException("No boolean property \"core\" found from the project.");
+            }
+        }
+
+        if (core)
+        {
+            if (project.hasProperty("coreVersion"))
+            {
+                coreVersion = (String) project.property("coreVersion");
+            }
+            else
+            {
+                throw new NullPointerException("No String property \"coreVersion\" found from the project.");
+            }
+
+            coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
+            coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
+        }
+
+        if (project.hasProperty("basePackage"))
+        {
+            basePackage = (String) project.property("basePackage");
+        }
+        else
+        {
+            throw new NullPointerException("No String property \"basePackage\" found from the project.");
+        }
+
+        if (project.hasProperty("artifactsList"))
+        {
+            artifactsList = (List<String>) project.property("artifactsList");
+        }
+        else
+        {
+            throw new NullPointerException("No List<String> property \"artifactsList\" found from the project.");
+        }
+
+        if (project.hasProperty("manifest"))
+        {
+            manifest = (Closure) project.property("manifest");
+        }
+        else
+        {
+            manifest = null;
+        }
+
+        if (project.hasProperty("filesmaven"))
+        {
+            filesmaven = (String) project.property("filesmaven");
+        }
+        else
+        {
+            filesmaven = ".";
+        }
+
+        if (project.hasProperty("minecraftVersion"))
+        {
+            minecraftVersion = (String) project.property("minecraftVersion");
+        }
+        else
+        {
+            throw new NullPointerException("No String property \"minecraftVersion\" found from the project.");
+        }
+
+        if (project.hasProperty("versionCheck"))
+        {
+            versionCheck = (Boolean) project.property("versionCheck");
+        }
+        else
+        {
+            throw new NullPointerException("No boolean property \"versionCheck\" found from the project.");
+        }
+
+        hasKeystore = project.hasProperty("keystoreLocation");
+
+        // Always last
+        addManifest = manifest != null;
+        dir = basePackage.replace('.', '/');
+        isStable = version.isStable();
+    }
+
+    private void addRepositories()
+    {
         project.allprojects(new Action<Project>()
         {
             @Override
@@ -57,50 +215,62 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 addMavenRepo(project, "cbs", Reference.MAVEN);
             }
         });
+    }
 
-        if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
-                .equals(Reference.DGC_NAME.toLowerCase()))
+    private void addDependencies()
+    {
+        if (core)
         {
-            addCoreDep();
+            project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
+        }
+    }
+
+    private void makeProjectTasks()
+    {
+        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
+        {
+            makePackageTasks();
+            makeSignTask();
         }
 
-        if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()))
+        if (projectName.toLowerCase().equals(Projects.CW.toLowerCase()))
         {
             makeBaublesTask();
-            makeCWPackageTasks();
-            makeCWSignTask();
+
+            // TODO Remove
+            manifest = new Closure<Object>(project)
+            {
+                @Override
+                public Object call()
+                {
+                    Manifest manifest = (Manifest) getDelegate();
+                    manifest.getAttributes().put("FMLCorePlugin", delayedString(
+                            "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader").call());
+                    manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
+                    return null;
+                }
+            };
+
+            makePackageTasks();
+            makeSignTask();
         }
 
-        if (projectName.toLowerCase().equals(Reference.DGC_NAME.toLowerCase()))
+        if (projectName.toLowerCase().equals(Projects.DGC.toLowerCase()))
         {
-            makeDgCPackageTasks();
-            makeDgCSignTask();
+            makePackageTasks();
+            makeSignTask();
         }
-
-        if (projectName.toLowerCase().equals(Reference.CORE_NAME.toLowerCase()))
-        {
-            makeCorePackageTasks();
-            makeCoreSignTask();
-        }
-
-        makeLifecycleTasks();
     }
 
-    public void addCoreDep()
-    {
-        project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
-    }
-
-    public void makeBaublesTask()
+    private void makeBaublesTask()
     {
         try
         {
             String baublesMc = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES_MC");
             String baubles = ProjectPropertyHelper.Source.getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = ProjectPropertyHelper.Source
-                    .getProperty(project, "src/main/java/celestibytes/celestialwizardry/reference/Reference.java",
-                                 "BAUBLES_ROOT");
+            String baublesRoot = ProjectPropertyHelper.Source.getProperty(project, "src/main/java/" + dir
+                    + "/reference/Reference.java", "BAUBLES_ROOT");
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 
@@ -182,7 +352,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
-    public void makeCWPackageTasks()
+    private void makePackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
 
@@ -198,69 +368,77 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         project.getTasks().getByName("build").dependsOn(changelog);
 
-        Closure<Object> commonManifest = new Closure<Object>(project)
+        Jar jar = (Jar) project.getTasks().getByName("jar");
+
+        if (addManifest)
         {
-            @Override
-            public Object call()
+            jar.manifest(manifest);
+        }
+
+        jar.dependsOn(changelog);
+
+        if (artifactsList.contains("javadoc"))
+        {
+            Jar javadocJar = makeTask("javadocJar", Jar.class);
+            javadocJar.setClassifier("javadoc");
+            javadocJar.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
+            javadocJar.dependsOn(jar, "javadoc");
+            javadocJar.setExtension("jar");
+            project.getArtifacts().add("archives", javadocJar);
+        }
+
+        if (artifactsList.contains("sources") || artifactsList.contains("src"))
+        {
+            Jar sourcesJar = makeTask("sourcesJar", Jar.class);
+            sourcesJar.setClassifier("sources");
+            sourcesJar.from(delayedFile(changelogFile));
+            sourcesJar.from(delayedFile("LICENSE"));
+            sourcesJar.from(delayedFile("build.gradle"));
+            sourcesJar.from(delayedFile("settings.gradle"));
+            sourcesJar.from(delayedFile("{BUILD_DIR}/sources/java/"));
+            sourcesJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
+            sourcesJar.from(delayedFile("gradlew"));
+            sourcesJar.from(delayedFile("gradlew.bat"));
+            sourcesJar.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
+            sourcesJar.dependsOn(jar);
+            sourcesJar.setExtension("jar");
+            project.getArtifacts().add("archives", sourcesJar);
+        }
+
+        if (artifactsList.contains("api"))
+        {
+            String apiDir = dir + "/api/";
+
+            Jar apiJar = makeTask("apiJar", Jar.class);
+            apiJar.setClassifier("api");
+            apiJar.from(delayedFile("{BUILD_DIR}/sources/java/" + apiDir), new CopyInto(apiDir));
+            apiJar.dependsOn(jar);
+            apiJar.setExtension("jar");
+            project.getArtifacts().add("archives", apiJar);
+        }
+
+        if (artifactsList.contains("dev") || artifactsList.contains("deobf"))
+        {
+            Jar devJar = makeTask("devJar", Jar.class);
+            devJar.setClassifier("dev");
+            devJar.from(delayedFile(changelogFile));
+            devJar.from(delayedFile("LICENSE"));
+            devJar.from(delayedFile("{BUILD_DIR}/classes/main/"));
+            devJar.from(delayedFile("{BUILD_DIR}/classes/api/"));
+            devJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
+
+            if (addManifest)
             {
-                Manifest manifest = (Manifest) getDelegate();
-                manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString(
-                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
-                                                     .call());
-                manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
-                return null;
+                devJar.manifest(manifest);
             }
-        };
 
-        Jar jarTask = (Jar) project.getTasks().getByName("jar");
-        jarTask.manifest(commonManifest);
-        jarTask.dependsOn(changelog);
-
-        Jar javadoc = makeTask("javadocJar", Jar.class);
-        javadoc.setClassifier("javadoc");
-        javadoc.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
-        javadoc.dependsOn(jarTask, "javadoc");
-        javadoc.setExtension("jar");
-        project.getArtifacts().add("archives", javadoc);
-
-        Jar sources = makeTask("sourcesJar", Jar.class);
-        sources.setClassifier("sources");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        sources.from(delayedFile("build.gradle"));
-        sources.from(delayedFile("settings.gradle"));
-        sources.from(delayedFile("{BUILD_DIR}/sources/java/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        sources.from(delayedFile("gradlew"));
-        sources.from(delayedFile("gradlew.bat"));
-        sources.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
-        sources.dependsOn(jarTask);
-        sources.setExtension("jar");
-        project.getArtifacts().add("archives", sources);
-
-        Jar api = makeTask("apiJar", Jar.class);
-        api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/celestialwizardry/api/"),
-                 new CopyInto("celestibytes/celestialwizardry/api/"));
-        api.dependsOn(jarTask);
-        api.setExtension("jar");
-        project.getArtifacts().add("archives", api);
-
-        Jar deobf = makeTask("deobfJar", Jar.class);
-        deobf.setClassifier("deobf");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        deobf.manifest(commonManifest);
-        deobf.dependsOn(jarTask);
-        deobf.setExtension("jar");
-        project.getArtifacts().add("archives", deobf);
+            devJar.dependsOn(jar);
+            devJar.setExtension("jar");
+            project.getArtifacts().add("archives", devJar);
+        }
     }
 
-    public void makeCWSignTask()
+    private void makeSignTask()
     {
         final Jar jar = (Jar) project.getTasks().getByName("jar");
         final File jarPath = jar.getArchivePath();
@@ -268,7 +446,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
         final String keystorePassword = (String) project.getProperties().get("keystore_password");
 
-        DefaultTask signJar = makeTask("signJar", DefaultTask.class);
+        DefaultTask signJar = makeTask("signJar");
         signJar.getInputs().file(jarPath);
         signJar.getInputs().file(keystoreLocation);
         signJar.getInputs().property("keystore_alias", keystoreAlias);
@@ -279,237 +457,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             @Override
             public boolean isSatisfiedBy(Task task)
             {
-                return !keystoreLocation.getPath().equals(".");
-            }
-        });
-        signJar.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("destDir", jar.getDestinationDir().getPath());
-                args.put("jar", jarPath.getPath());
-                args.put("keystore", keystoreLocation.getPath());
-                args.put("alias", keystoreAlias);
-                args.put("storepass", keystorePassword);
-                invokeAnt("signjar", args);
-            }
-        });
-        signJar.dependsOn("build");
-
-        project.getTasks().getByName("uploadArchives").dependsOn(signJar);
-    }
-
-    public void makeDgCPackageTasks()
-    {
-        String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
-
-        ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
-
-        changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
-        changelog.setJobName(delayedString("{JENKINS_JOB}"));
-        changelog.setAuthName(delayedString("{JENKINS_AUTH_NAME}"));
-        changelog.setAuthPassword(delayedString("{JENKINS_AUTH_PASSWORD}"));
-        changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
-        changelog.setOutput(delayedFile(changelogFile));
-        changelog.dependsOn("classes", "processResources");
-
-        project.getTasks().getByName("build").dependsOn(changelog);
-
-        Closure<Object> commonManifest = new Closure<Object>(project)
-        {
-            @Override
-            public Object call()
-            {
-                /* Manifest manifest = (Manifest) getDelegate();
-                manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString(
-                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
-                                                     .call());
-                manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call()); */
-                return null;
-            }
-        };
-
-        Jar jarTask = (Jar) project.getTasks().getByName("jar");
-        jarTask.manifest(commonManifest);
-        jarTask.dependsOn(changelog);
-
-        Jar javadoc = makeTask("javadocJar", Jar.class);
-        javadoc.setClassifier("javadoc");
-        javadoc.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
-        javadoc.dependsOn(jarTask, "javadoc");
-        javadoc.setExtension("jar");
-        project.getArtifacts().add("archives", javadoc);
-
-        Jar sources = makeTask("sourcesJar", Jar.class);
-        sources.setClassifier("sources");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        sources.from(delayedFile("build.gradle"));
-        sources.from(delayedFile("settings.gradle"));
-        sources.from(delayedFile("{BUILD_DIR}/sources/java/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        sources.from(delayedFile("gradlew"));
-        sources.from(delayedFile("gradlew.bat"));
-        sources.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
-        sources.dependsOn(jarTask);
-        sources.setExtension("jar");
-        project.getArtifacts().add("archives", sources);
-
-        Jar api = makeTask("apiJar", Jar.class);
-        api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/pizzana/doughcraft/api/"),
-                 new CopyInto("pizzana/doughcraft/api/"));
-        api.dependsOn(jarTask);
-        api.setExtension("jar");
-        project.getArtifacts().add("archives", api);
-
-        Jar deobf = makeTask("deobfJar", Jar.class);
-        deobf.setClassifier("deobf");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        deobf.manifest(commonManifest);
-        deobf.dependsOn(jarTask);
-        deobf.setExtension("jar");
-        project.getArtifacts().add("archives", deobf);
-    }
-
-    public void makeDgCSignTask()
-    {
-        final Jar jar = (Jar) project.getTasks().getByName("jar");
-        final File jarPath = jar.getArchivePath();
-        final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
-        final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
-        final String keystorePassword = (String) project.getProperties().get("keystore_password");
-
-        DefaultTask signJar = makeTask("signJar", DefaultTask.class);
-        signJar.getInputs().file(jarPath);
-        signJar.getInputs().file(keystoreLocation);
-        signJar.getInputs().property("keystore_alias", keystoreAlias);
-        signJar.getInputs().property("keystore_password", keystorePassword);
-        signJar.getOutputs().file(jarPath);
-        signJar.onlyIf(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                return !keystoreLocation.getPath().equals(".");
-            }
-        });
-        signJar.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("destDir", jar.getDestinationDir().getPath());
-                args.put("jar", jarPath.getPath());
-                args.put("keystore", keystoreLocation.getPath());
-                args.put("alias", keystoreAlias);
-                args.put("storepass", keystorePassword);
-                invokeAnt("signjar", args);
-            }
-        });
-        signJar.dependsOn("build");
-
-        project.getTasks().getByName("uploadArchives").dependsOn(signJar);
-    }
-
-    public void makeCorePackageTasks()
-    {
-        String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
-
-        ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
-
-        changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
-        changelog.setJobName(delayedString("{JENKINS_JOB}"));
-        changelog.setAuthName(delayedString("{JENKINS_AUTH_NAME}"));
-        changelog.setAuthPassword(delayedString("{JENKINS_AUTH_PASSWORD}"));
-        changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
-        changelog.setOutput(delayedFile(changelogFile));
-        changelog.dependsOn("classes", "processResources");
-
-        project.getTasks().getByName("build").dependsOn(changelog);
-
-        Closure<Object> commonManifest = new Closure<Object>(project)
-        {
-            @Override
-            public Object call()
-            {
-                Manifest manifest = (Manifest) getDelegate();
-                /* manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString(
-                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
-                                                     .call());
-                manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call()); */
-                return null;
-            }
-        };
-
-        Jar jarTask = (Jar) project.getTasks().getByName("jar");
-        jarTask.manifest(commonManifest);
-        jarTask.dependsOn(changelog);
-
-        Jar javadoc = makeTask("javadocJar", Jar.class);
-        javadoc.setClassifier("javadoc");
-        javadoc.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
-        javadoc.dependsOn(jarTask, "javadoc");
-        javadoc.setExtension("jar");
-        project.getArtifacts().add("archives", javadoc);
-
-        Jar sources = makeTask("sourcesJar", Jar.class);
-        sources.setClassifier("sources");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        sources.from(delayedFile("build.gradle"));
-        sources.from(delayedFile("settings.gradle"));
-        sources.from(delayedFile("{BUILD_DIR}/sources/java/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        sources.from(delayedFile("gradlew"));
-        sources.from(delayedFile("gradlew.bat"));
-        sources.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
-        sources.dependsOn(jarTask);
-        sources.setExtension("jar");
-        project.getArtifacts().add("archives", sources);
-
-        Jar deobf = makeTask("deobfJar", Jar.class);
-        deobf.setClassifier("deobf");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        deobf.manifest(commonManifest);
-        deobf.dependsOn(jarTask);
-        deobf.setExtension("jar");
-        project.getArtifacts().add("archives", deobf);
-    }
-
-    public void makeCoreSignTask()
-    {
-        final Jar jar = (Jar) project.getTasks().getByName("jar");
-        final File jarPath = jar.getArchivePath();
-        final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
-        final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
-        final String keystorePassword = (String) project.getProperties().get("keystore_password");
-
-        DefaultTask signJar = makeTask("signJar", DefaultTask.class);
-        signJar.getInputs().file(jarPath);
-        signJar.getInputs().file(keystoreLocation);
-        signJar.getInputs().property("keystore_alias", keystoreAlias);
-        signJar.getInputs().property("keystore_password", keystorePassword);
-        signJar.getOutputs().file(jarPath);
-        signJar.onlyIf(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                return !keystoreLocation.getPath().equals(".");
+                return hasKeystore;
             }
         });
         signJar.doLast(new Action<Task>()
@@ -533,10 +481,265 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void makeLifecycleTasks()
     {
-        DefaultTask release = makeTask("release", DefaultTask.class);
+        DefaultTask processJson = makeTask("processJson");
+        processJson.onlyIf(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                return versionCheck;
+            }
+        });
+        processJson.doLast(new Action<Task>()
+        {
+            @Override
+            @SuppressWarnings("unchecked")
+            public void execute(Task task)
+            {
+                try
+                {
+                    URLConnection urlConnection = new URL(Reference.MAVEN + "data.json").openConnection();
+
+                    urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
+                    urlConnection.connect();
+
+                    InputStream inputStream = urlConnection.getInputStream();
+
+                    String json = new String(ByteStreams.toByteArray(inputStream));
+
+                    inputStream.close();
+
+                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
+
+                    processMaps(data);
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
+        processJson.dependsOn("uploadArchives");
+
+        DefaultTask release = makeTask("release");
         release.setDescription("Wrapper task for building release-ready archives.");
         release.setGroup(Reference.NAME);
-        release.dependsOn("uploadArchives");
+        release.dependsOn(processJson);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void processMaps(Map<String, Object> data) throws IOException
+    {
+        if (!data.containsKey(jsonName) || (data.containsKey(jsonName) && !(data.get(jsonName) instanceof Map)))
+        {
+            data.remove(jsonName);
+
+            Map<String, Object> modNode = newMap();
+            Map<String, Object> minecraftNode = newMap();
+            Map<String, Object> channelsNode = newMap();
+
+            minecraftNode.put(CHANNELS, initChannels(channelsNode));
+
+            modNode.put(minecraftVersion, minecraftNode);
+
+            data.put(jsonName, modNode);
+        }
+        else
+        {
+            Map<String, Object> modNode = (Map<String, Object>) data.get(jsonName);
+
+            if (!modNode.containsKey(minecraftVersion) || (modNode.containsKey(minecraftVersion) && !(modNode
+                    .get(minecraftVersion) instanceof Map)))
+            {
+                modNode.remove(minecraftVersion);
+
+                Map<String, Object> minecraftNode = newMap();
+                Map<String, Object> channelsNode = newMap();
+
+                minecraftNode.put(CHANNELS, initChannels(channelsNode));
+
+                modNode.put(minecraftVersion, minecraftNode);
+
+                data.put(jsonName, modNode);
+            }
+            else
+            {
+                Map<String, Object> minecraftNode = (Map<String, Object>) modNode.get(minecraftVersion);
+
+                if (!minecraftNode.containsKey(CHANNELS) || (minecraftNode.containsKey(CHANNELS) && !(minecraftNode
+                        .get(CHANNELS) instanceof Map)))
+                {
+                    minecraftNode.remove(CHANNELS);
+
+                    Map<String, Object> channelsNode = newMap();
+
+                    minecraftNode.put(CHANNELS, initChannels(channelsNode));
+
+                    modNode.put(minecraftVersion, minecraftNode);
+
+                    data.put(jsonName, modNode);
+                }
+                else
+                {
+                    Map<String, Object> channelsNode = (Map<String, Object>) minecraftNode.get(CHANNELS);
+
+                    if (!channelsNode.containsKey(STABLE) || (channelsNode.containsKey(STABLE) && !(channelsNode
+                            .get(STABLE) instanceof Map)))
+                    {
+                        channelsNode.remove(STABLE);
+
+                        channelsNode.put(STABLE, initStable());
+
+                        minecraftNode.put(CHANNELS, channelsNode);
+
+                        modNode.put(minecraftVersion, minecraftNode);
+
+                        data.put(jsonName, modNode);
+                    }
+                    else
+                    {
+                        if (isStable)
+                        {
+                            Map<String, Object> stable = (Map<String, Object>) channelsNode.get(STABLE);
+
+                            channelsNode.put(STABLE, processStable(stable));
+
+                            minecraftNode.put(CHANNELS, channelsNode);
+
+                            modNode.put(minecraftVersion, minecraftNode);
+
+                            data.put(jsonName, modNode);
+                        }
+                    }
+
+                    if (!channelsNode.containsKey(LATEST) || (channelsNode.containsKey(LATEST) && !(channelsNode
+                            .get(LATEST) instanceof Map)))
+                    {
+                        channelsNode.remove(LATEST);
+
+                        channelsNode.put(LATEST, initLatest());
+
+                        minecraftNode.put(CHANNELS, channelsNode);
+
+                        modNode.put(minecraftVersion, minecraftNode);
+
+                        data.put(jsonName, modNode);
+                    }
+                    else
+                    {
+                        if (!isStable)
+                        {
+                            Map<String, Object> latest = (Map<String, Object>) channelsNode.get(LATEST);
+
+                            channelsNode.put(LATEST, processLatest(latest));
+
+                            minecraftNode.put(CHANNELS, channelsNode);
+
+                            modNode.put(minecraftVersion, minecraftNode);
+
+                            data.put(jsonName, modNode);
+                        }
+                    }
+                }
+            }
+        }
+
+        Map<String, String> args = Maps.newHashMap();
+        args.put("file", filesmaven + "/data.json");
+        invokeAnt("delete", args);
+
+        File json = project.file(filesmaven + "/data.json");
+
+        FileUtils.writeStringToFile(json, new Gson().toJson(data));
+    }
+
+    private Map<String, Object> initChannels(Map<String, Object> channelsNode)
+    {
+        channelsNode.put(STABLE, initStable());
+        channelsNode.put(LATEST, initLatest());
+
+        return channelsNode;
+    }
+
+    private Map<String, Object> initStable()
+    {
+        Map<String, Object> stable = newMap();
+
+        return processStable(stable);
+    }
+
+    private Map<String, Object> processStable(Map<String, Object> stable)
+    {
+        // TODO Description
+        if (isStable)
+        {
+            stable.put(MAJOR, version.major);
+            stable.put(MINOR, version.minor);
+            stable.put(PATCH, version.patch);
+            stable.put(DESCRIPTION, "");
+        }
+        else
+        {
+            stable.put(MAJOR, 0);
+            stable.put(MINOR, 0);
+            stable.put(PATCH, 0);
+            stable.put(DESCRIPTION, "");
+        }
+
+        return stable;
+    }
+
+    private Map<String, Object> initLatest()
+    {
+        Map<String, Object> latest = newMap();
+
+        return processLatest(latest);
+    }
+
+    private Map<String, Object> processLatest(Map<String, Object> latest)
+    {
+        // TODO Description
+        if (isStable)
+        {
+            latest.put(MAJOR, 0);
+            latest.put(MINOR, 0);
+            latest.put(PATCH, 0);
+            latest.put(POSTFIX, null);
+            latest.put(NUMBER, 0);
+            latest.put(DESCRIPTION, "");
+        }
+        else
+        {
+            latest.put(MAJOR, version.major);
+            latest.put(MINOR, version.minor);
+            latest.put(PATCH, version.patch);
+            latest.put(POSTFIX, version.getChannel().getKey());
+            latest.put(NUMBER, version.number);
+            latest.put(DESCRIPTION, "");
+        }
+
+        return latest;
+    }
+
+    private <K, V> Map<K, V> newMap()
+    {
+        return new HashMap<K, V>();
+    }
+
+    public static void displayBanner()
+    {
+        projectStatic.getLogger().lifecycle("****************************");
+        projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
+        projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);
+
+        if (fg)
+        {
+            projectStatic.getLogger().lifecycle(" ForgeGradle enabled        ");
+        }
+        else
+        {
+            projectStatic.getLogger().lifecycle("****************************");
+        }
     }
 
     public DefaultTask makeTask(String name)
@@ -550,7 +753,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
+    private static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
     {
         HashMap<String, Object> map = new HashMap<String, Object>();
         map.put("name", name);
@@ -623,7 +826,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         pattern = pattern.replace("{CORE_VERSION}", coreVersion);
-        pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
+        pattern = pattern.replace("{CORE_NAME}", Projects.CORE);
         return pattern;
     }
 }

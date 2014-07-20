@@ -189,7 +189,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         else
         {
-            filesmaven = ".";
+            filesmaven = "./files";
         }
 
         if (project.hasProperty("versionCheck"))

@@ -9,6 +9,7 @@ import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
+import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
@@ -36,6 +37,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 {
     public Project project;
     public String projectName;
+    public boolean core;
     public String coreArtifact;
     public String coreDevArtifact;
     public String coreVersion;
@@ -45,10 +47,50 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         this.project = project;
         projectName = project.getName();
-        coreVersion = (String) project.property("coreVersion");
-        coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
-        coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":deobf";
 
+        resolveProperties();
+        addRepositories();
+        addDependencies();
+        makeProjectTasks();
+        makeLifecycleTasks();
+    }
+
+    private void resolveProperties()
+    {
+        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
+        {
+            core = false;
+        }
+        else
+        {
+            if (project.hasProperty("core"))
+            {
+                core = (Boolean) project.property("core");
+            }
+            else
+            {
+                throw new NullPointerException("No boolean property \"core\" found from the project.");
+            }
+        }
+
+        if (core)
+        {
+            if (project.hasProperty("coreVersion"))
+            {
+                coreVersion = (String) project.property("coreVersion");
+            }
+            else
+            {
+                throw new NullPointerException("No String property \"coreVersion\" found from the project.");
+            }
+
+            coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
+            coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
+        }
+    }
+
+    private void addRepositories()
+    {
         project.allprojects(new Action<Project>()
         {
             @Override
@@ -57,41 +99,61 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 addMavenRepo(project, "cbs", Reference.MAVEN);
             }
         });
+    }
 
-        if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()) || projectName.toLowerCase()
-                .equals(Reference.DGC_NAME.toLowerCase()))
+    private void addDependencies()
+    {
+        if (core)
         {
-            addCoreDep();
+            project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
+        }
+    }
+
+    private void makeProjectTasks()
+    {
+        List<String> artifacts = new ArrayList<String>();
+
+        artifacts.add("javadoc");
+        artifacts.add("sources");
+        artifacts.add("dev");
+
+        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
+        {
+            makePackageTasks(artifacts, "celestibytes.core");
+            makeSignTask();
         }
 
-        if (projectName.toLowerCase().equals(Reference.CW_NAME.toLowerCase()))
+        artifacts.add("api");
+
+        if (projectName.toLowerCase().equals(Projects.CW.toLowerCase()))
         {
             makeBaublesTask();
-            makeCWPackageTasks();
+
+            Closure<Object> manifest = new Closure<Object>(project)
+            {
+                @Override
+                public Object call()
+                {
+                    Manifest manifest = (Manifest) getDelegate();
+                    manifest.getAttributes().put("FMLCorePlugin", delayedString(
+                            "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader").call());
+                    manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
+                    return null;
+                }
+            };
+
+            makePackageTasks(artifacts, manifest, "celestibytes.celestialwizardry");
             makeSignTask();
         }
 
-        if (projectName.toLowerCase().equals(Reference.DGC_NAME.toLowerCase()))
+        if (projectName.toLowerCase().equals(Projects.DGC.toLowerCase()))
         {
-            makeDgCPackageTasks();
+            makePackageTasks(artifacts, "pizzana.doughcraft");
             makeSignTask();
         }
-
-        if (projectName.toLowerCase().equals(Reference.CORE_NAME.toLowerCase()))
-        {
-            makeCorePackageTasks();
-            makeSignTask();
-        }
-
-        makeLifecycleTasks();
     }
 
-    public void addCoreDep()
-    {
-        project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
-    }
-
-    public void makeBaublesTask()
+    private void makeBaublesTask()
     {
         try
         {
@@ -182,88 +244,16 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
-    @Deprecated
-    public void makeCWPackageTasks()
+    private void makePackageTasks(List<String> artifacts, String basePackage)
     {
-        String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
-
-        ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
-
-        changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
-        changelog.setJobName(delayedString("{JENKINS_JOB}"));
-        changelog.setAuthName(delayedString("{JENKINS_AUTH_NAME}"));
-        changelog.setAuthPassword(delayedString("{JENKINS_AUTH_PASSWORD}"));
-        changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
-        changelog.setOutput(delayedFile(changelogFile));
-        changelog.dependsOn("classes", "processResources");
-
-        project.getTasks().getByName("build").dependsOn(changelog);
-
-        Closure<Object> commonManifest = new Closure<Object>(project)
-        {
-            @Override
-            public Object call()
-            {
-                Manifest manifest = (Manifest) getDelegate();
-                manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString(
-                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
-                                                     .call());
-                manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
-                return null;
-            }
-        };
-
-        Jar jarTask = (Jar) project.getTasks().getByName("jar");
-        jarTask.manifest(commonManifest);
-        jarTask.dependsOn(changelog);
-
-        Jar javadoc = makeTask("javadocJar", Jar.class);
-        javadoc.setClassifier("javadoc");
-        javadoc.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
-        javadoc.dependsOn(jarTask, "javadoc");
-        javadoc.setExtension("jar");
-        project.getArtifacts().add("archives", javadoc);
-
-        Jar sources = makeTask("sourcesJar", Jar.class);
-        sources.setClassifier("sources");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        sources.from(delayedFile("build.gradle"));
-        sources.from(delayedFile("settings.gradle"));
-        sources.from(delayedFile("{BUILD_DIR}/sources/java/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        sources.from(delayedFile("gradlew"));
-        sources.from(delayedFile("gradlew.bat"));
-        sources.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
-        sources.dependsOn(jarTask);
-        sources.setExtension("jar");
-        project.getArtifacts().add("archives", sources);
-
-        Jar api = makeTask("apiJar", Jar.class);
-        api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/celestibytes/celestialwizardry/api/"),
-                 new CopyInto("celestibytes/celestialwizardry/api/"));
-        api.dependsOn(jarTask);
-        api.setExtension("jar");
-        project.getArtifacts().add("archives", api);
-
-        Jar deobf = makeTask("deobfJar", Jar.class);
-        deobf.setClassifier("deobf");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        deobf.manifest(commonManifest);
-        deobf.dependsOn(jarTask);
-        deobf.setExtension("jar");
-        project.getArtifacts().add("archives", deobf);
+        makePackageTasks(artifacts, null, basePackage);
     }
 
-    @Deprecated
-    public void makeDgCPackageTasks()
+    private void makePackageTasks(List<String> artifacts, Closure manifest, String basePackage)
     {
+        boolean addManifest = manifest != null;
+        String dir = basePackage.replace('.', '/');
+
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
 
         ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
@@ -278,137 +268,74 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         project.getTasks().getByName("build").dependsOn(changelog);
 
-        Closure<Object> commonManifest = new Closure<Object>(project)
+        Jar jar = (Jar) project.getTasks().getByName("jar");
+
+        if (addManifest)
         {
-            @Override
-            public Object call()
-            {
-                /* Manifest manifest = (Manifest) getDelegate();
-                manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString(
-                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
-                                                     .call());
-                manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call()); */
-                return null;
-            }
-        };
+            jar.manifest(manifest);
+        }
 
-        Jar jarTask = (Jar) project.getTasks().getByName("jar");
-        jarTask.manifest(commonManifest);
-        jarTask.dependsOn(changelog);
+        jar.dependsOn(changelog);
 
-        Jar javadoc = makeTask("javadocJar", Jar.class);
-        javadoc.setClassifier("javadoc");
-        javadoc.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
-        javadoc.dependsOn(jarTask, "javadoc");
-        javadoc.setExtension("jar");
-        project.getArtifacts().add("archives", javadoc);
-
-        Jar sources = makeTask("sourcesJar", Jar.class);
-        sources.setClassifier("sources");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        sources.from(delayedFile("build.gradle"));
-        sources.from(delayedFile("settings.gradle"));
-        sources.from(delayedFile("{BUILD_DIR}/sources/java/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        sources.from(delayedFile("gradlew"));
-        sources.from(delayedFile("gradlew.bat"));
-        sources.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
-        sources.dependsOn(jarTask);
-        sources.setExtension("jar");
-        project.getArtifacts().add("archives", sources);
-
-        Jar api = makeTask("apiJar", Jar.class);
-        api.setClassifier("api");
-        api.from(delayedFile("{BUILD_DIR}/sources/java/pizzana/doughcraft/api/"),
-                 new CopyInto("pizzana/doughcraft/api/"));
-        api.dependsOn(jarTask);
-        api.setExtension("jar");
-        project.getArtifacts().add("archives", api);
-
-        Jar deobf = makeTask("deobfJar", Jar.class);
-        deobf.setClassifier("deobf");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        deobf.manifest(commonManifest);
-        deobf.dependsOn(jarTask);
-        deobf.setExtension("jar");
-        project.getArtifacts().add("archives", deobf);
-    }
-
-    @Deprecated
-    public void makeCorePackageTasks()
-    {
-        String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
-
-        ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
-
-        changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
-        changelog.setJobName(delayedString("{JENKINS_JOB}"));
-        changelog.setAuthName(delayedString("{JENKINS_AUTH_NAME}"));
-        changelog.setAuthPassword(delayedString("{JENKINS_AUTH_PASSWORD}"));
-        changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
-        changelog.setOutput(delayedFile(changelogFile));
-        changelog.dependsOn("classes", "processResources");
-
-        project.getTasks().getByName("build").dependsOn(changelog);
-
-        Closure<Object> commonManifest = new Closure<Object>(project)
+        if (artifacts.contains("javadoc"))
         {
-            @Override
-            public Object call()
+            Jar javadocJar = makeTask("javadocJar", Jar.class);
+            javadocJar.setClassifier("javadoc");
+            javadocJar.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
+            javadocJar.dependsOn(jar, "javadoc");
+            javadocJar.setExtension("jar");
+            project.getArtifacts().add("archives", javadocJar);
+        }
+
+        if (artifacts.contains("sources") || artifacts.contains("src"))
+        {
+            Jar sourcesJar = makeTask("sourcesJar", Jar.class);
+            sourcesJar.setClassifier("sources");
+            sourcesJar.from(delayedFile(changelogFile));
+            sourcesJar.from(delayedFile("LICENSE"));
+            sourcesJar.from(delayedFile("build.gradle"));
+            sourcesJar.from(delayedFile("settings.gradle"));
+            sourcesJar.from(delayedFile("{BUILD_DIR}/sources/java/"));
+            sourcesJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
+            sourcesJar.from(delayedFile("gradlew"));
+            sourcesJar.from(delayedFile("gradlew.bat"));
+            sourcesJar.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
+            sourcesJar.dependsOn(jar);
+            sourcesJar.setExtension("jar");
+            project.getArtifacts().add("archives", sourcesJar);
+        }
+
+        if (artifacts.contains("api"))
+        {
+            String apiDir = dir + "/api/";
+
+            Jar apiJar = makeTask("apiJar", Jar.class);
+            apiJar.setClassifier("api");
+            apiJar.from(delayedFile("{BUILD_DIR}/sources/java/" + apiDir), new CopyInto(apiDir));
+            apiJar.dependsOn(jar);
+            apiJar.setExtension("jar");
+            project.getArtifacts().add("archives", apiJar);
+        }
+
+        if (artifacts.contains("dev") || artifacts.contains("deobf"))
+        {
+            Jar devJar = makeTask("devJar", Jar.class);
+            devJar.setClassifier("dev");
+            devJar.from(delayedFile(changelogFile));
+            devJar.from(delayedFile("LICENSE"));
+            devJar.from(delayedFile("{BUILD_DIR}/classes/main/"));
+            devJar.from(delayedFile("{BUILD_DIR}/classes/api/"));
+            devJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
+
+            if (addManifest)
             {
-                Manifest manifest = (Manifest) getDelegate();
-                /* manifest.getAttributes().put("FMLCorePlugin",
-                                             delayedString(
-                                                     "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader")
-                                                     .call());
-                manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call()); */
-                return null;
+                devJar.manifest(manifest);
             }
-        };
 
-        Jar jarTask = (Jar) project.getTasks().getByName("jar");
-        jarTask.manifest(commonManifest);
-        jarTask.dependsOn(changelog);
-
-        Jar javadoc = makeTask("javadocJar", Jar.class);
-        javadoc.setClassifier("javadoc");
-        javadoc.from(delayedFile("{BUILD_DIR}/docs/javadoc/"));
-        javadoc.dependsOn(jarTask, "javadoc");
-        javadoc.setExtension("jar");
-        project.getArtifacts().add("archives", javadoc);
-
-        Jar sources = makeTask("sourcesJar", Jar.class);
-        sources.setClassifier("sources");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        sources.from(delayedFile("build.gradle"));
-        sources.from(delayedFile("settings.gradle"));
-        sources.from(delayedFile("{BUILD_DIR}/sources/java/"));
-        sources.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        sources.from(delayedFile("gradlew"));
-        sources.from(delayedFile("gradlew.bat"));
-        sources.from(delayedFile("gradle/wrapper"), new CopyInto("gradle/wrapper"));
-        sources.dependsOn(jarTask);
-        sources.setExtension("jar");
-        project.getArtifacts().add("archives", sources);
-
-        Jar deobf = makeTask("deobfJar", Jar.class);
-        deobf.setClassifier("deobf");
-        sources.from(delayedFile(changelogFile));
-        sources.from(delayedFile("LICENSE"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/main/"));
-        deobf.from(delayedFile("{BUILD_DIR}/classes/api/"));
-        deobf.from(delayedFile("{BUILD_DIR}/resources/main/"));
-        deobf.manifest(commonManifest);
-        deobf.dependsOn(jarTask);
-        deobf.setExtension("jar");
-        project.getArtifacts().add("archives", deobf);
+            devJar.dependsOn(jar);
+            devJar.setExtension("jar");
+            project.getArtifacts().add("archives", devJar);
+        }
     }
 
     private void makeSignTask()
@@ -544,7 +471,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         pattern = pattern.replace("{CORE_VERSION}", coreVersion);
-        pattern = pattern.replace("{CORE_NAME}", Reference.CORE_NAME);
+        pattern = pattern.replace("{CORE_NAME}", Projects.CORE);
         return pattern;
     }
 }

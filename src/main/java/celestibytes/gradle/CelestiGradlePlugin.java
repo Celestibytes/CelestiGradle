@@ -505,7 +505,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             Map<String, Object> modNode = (Map<String, Object>) data.get(jsonName);
 
-            if (!modNode.containsKey(minecraftVersion) || (modNode.containsKey(minecraftVersion) && !(modNode.get(minecraftVersion) instanceof Map)))
+            if (!modNode.containsKey(minecraftVersion) || (modNode.containsKey(minecraftVersion) && !(modNode
+                    .get(minecraftVersion) instanceof Map)))
             {
                 modNode.remove(minecraftVersion);
 
@@ -522,7 +523,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             {
                 Map<String, Object> minecraftNode = (Map<String, Object>) modNode.get(minecraftVersion);
 
-                if (!minecraftNode.containsKey(CHANNELS) || (minecraftNode.containsKey(CHANNELS) && !(minecraftNode.get(CHANNELS) instanceof Map)))
+                if (!minecraftNode.containsKey(CHANNELS) || (minecraftNode.containsKey(CHANNELS) && !(minecraftNode
+                        .get(CHANNELS) instanceof Map)))
                 {
                     minecraftNode.remove(CHANNELS);
 
@@ -538,7 +540,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 {
                     Map<String, Object> channelsNode = (Map<String, Object>) minecraftNode.get(CHANNELS);
 
-                    if (!channelsNode.containsKey(STABLE) || (channelsNode.containsKey(STABLE) && !(channelsNode.get(STABLE) instanceof Map)))
+                    if (!channelsNode.containsKey(STABLE) || (channelsNode.containsKey(STABLE) && !(channelsNode
+                            .get(STABLE) instanceof Map)))
                     {
                         channelsNode.remove(STABLE);
 
@@ -566,7 +569,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                         }
                     }
 
-                    if (!channelsNode.containsKey(LATEST) || (channelsNode.containsKey(LATEST) && !(channelsNode.get(LATEST) instanceof Map)))
+                    if (!channelsNode.containsKey(LATEST) || (channelsNode.containsKey(LATEST) && !(channelsNode
+                            .get(LATEST) instanceof Map)))
                     {
                         channelsNode.remove(LATEST);
 

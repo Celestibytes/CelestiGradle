@@ -11,9 +11,13 @@ import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
+import celestibytes.pizzana.version.Version;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
+import com.google.gson.Gson;
 import groovy.lang.Closure;
 import io.github.pizzana.jkaffe.util.gradle.ProjectPropertyHelper;
+import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -24,16 +28,17 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
-import org.gradle.api.tasks.Upload;
 import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
@@ -53,11 +58,19 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private boolean addManifest;
     private String dir;
 
+    private String jsonName;
+    private Version version;
+    private boolean isStable;
+
+    private String minecraftVersion;
+
     @Override
     public void apply(Project project)
     {
         this.project = project;
         projectName = project.getName();
+        jsonName = projectName.toLowerCase();
+        version = Version.parse((String) project.getVersion());
 
         resolveProperties();
         addRepositories();
@@ -126,9 +139,19 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             filesmaven = ".";
         }
 
+        if (project.hasProperty("minecraftVersion"))
+        {
+            minecraftVersion = (String) project.property("minecraftVersion");
+        }
+        else
+        {
+            throw new NullPointerException("No String property \"minecraftVersion\" found from the project.");
+        }
+
         // Always last
         addManifest = manifest != null;
         dir = basePackage.replace('.', '/');
+        isStable = version.isStable();
     }
 
     private void addRepositories()
@@ -415,10 +438,326 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void makeLifecycleTasks()
     {
+        DefaultTask processJson = makeTask("processJson");
+        processJson.doLast(new Action<Task>()
+        {
+            @Override
+            public void execute(Task task)
+            {
+                try
+                {
+                    URLConnection urlConnection = new URL(Reference.MAVEN + "data.json").openConnection();
+
+                    urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
+                    urlConnection.connect();
+
+                    InputStream inputStream = urlConnection.getInputStream();
+
+                    String json = new String(ByteStreams.toByteArray(inputStream));
+
+                    inputStream.close();
+
+                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
+
+                    processMaps(data);
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
+        processJson.dependsOn("uploadArchives");
+
         DefaultTask release = makeTask("release");
         release.setDescription("Wrapper task for building release-ready archives.");
         release.setGroup(Reference.NAME);
-        release.dependsOn("uploadArchives");
+        release.dependsOn(processJson);
+    }
+
+    private void processMaps(Map<String, Object> data) throws IOException
+    {
+        if (!data.containsKey(jsonName) || (data.containsKey(jsonName) && !(data.get(jsonName) instanceof Map)))
+        {
+            data.remove(jsonName);
+
+            Map<String, Object> modNode = newMap();
+            Map<String, Object> minecraftNode = newMap();
+            Map<String, Object> channelsNode = newMap();
+            Map<String, Object> stable = newMap();
+            Map<String, Object> latest = newMap();
+
+            // TODO Description
+            if (isStable)
+            {
+                stable.put("major", version.major);
+                stable.put("minor", version.minor);
+                stable.put("patch", version.patch);
+                stable.put("description", "");
+
+                latest.put("major", 0);
+                latest.put("minor", 0);
+                latest.put("patch", 0);
+                latest.put("postfix", null);
+                latest.put("number", 0);
+                latest.put("description", "");
+            }
+            else
+            {
+                latest.put("major", version.major);
+                latest.put("minor", version.minor);
+                latest.put("patch", version.patch);
+                latest.put("postfix", version.getChannel().getKey());
+                latest.put("number", version.number);
+                latest.put("description", "");
+
+                stable.put("major", 0);
+                stable.put("minor", 0);
+                stable.put("patch", 0);
+                stable.put("description", "");
+            }
+
+            channelsNode.put("stable", stable);
+            channelsNode.put("latest", latest);
+
+            minecraftNode.put("channels", channelsNode);
+
+            modNode.put(minecraftVersion, minecraftNode);
+
+            data.put(jsonName, modNode);
+        }
+        else
+        {
+            Map<String, Object> modNode = (Map<String, Object>) data.get(jsonName);
+
+            if (!modNode.containsKey(minecraftVersion) || (modNode.containsKey(minecraftVersion) && !(modNode.get(minecraftVersion) instanceof Map)))
+            {
+                modNode.remove(minecraftVersion);
+
+                Map<String, Object> minecraftNode = newMap();
+                Map<String, Object> channelsNode = newMap();
+                Map<String, Object> stable = newMap();
+                Map<String, Object> latest = newMap();
+
+                // TODO Description
+                if (isStable)
+                {
+                    stable.put("major", version.major);
+                    stable.put("minor", version.minor);
+                    stable.put("patch", version.patch);
+                    stable.put("description", "");
+
+                    latest.put("major", 0);
+                    latest.put("minor", 0);
+                    latest.put("patch", 0);
+                    latest.put("postfix", null);
+                    latest.put("number", 0);
+                    latest.put("description", "");
+                }
+                else
+                {
+                    latest.put("major", version.major);
+                    latest.put("minor", version.minor);
+                    latest.put("patch", version.patch);
+                    latest.put("postfix", version.getChannel().getKey());
+                    latest.put("number", version.number);
+                    latest.put("description", "");
+
+                    stable.put("major", 0);
+                    stable.put("minor", 0);
+                    stable.put("patch", 0);
+                    stable.put("description", "");
+                }
+
+                channelsNode.put("stable", stable);
+                channelsNode.put("latest", latest);
+
+                minecraftNode.put("channels", channelsNode);
+
+                modNode.put(minecraftVersion, minecraftNode);
+
+                data.put(jsonName, modNode);
+            }
+            else
+            {
+                Map<String, Object> minecraftNode = (Map<String, Object>) modNode.get(minecraftVersion);
+
+                if (!minecraftNode.containsKey("channels") || (minecraftNode.containsKey("channels") && !(minecraftNode.get("channels") instanceof Map)))
+                {
+                    minecraftNode.remove("channels");
+
+                    Map<String, Object> channelsNode = newMap();
+                    Map<String, Object> stable = newMap();
+                    Map<String, Object> latest = newMap();
+
+                    // TODO Description
+                    if (isStable)
+                    {
+                        stable.put("major", version.major);
+                        stable.put("minor", version.minor);
+                        stable.put("patch", version.patch);
+                        stable.put("description", "");
+
+                        latest.put("major", 0);
+                        latest.put("minor", 0);
+                        latest.put("patch", 0);
+                        latest.put("postfix", null);
+                        latest.put("number", 0);
+                        latest.put("description", "");
+                    }
+                    else
+                    {
+                        latest.put("major", version.major);
+                        latest.put("minor", version.minor);
+                        latest.put("patch", version.patch);
+                        latest.put("postfix", version.getChannel().getKey());
+                        latest.put("number", version.number);
+                        latest.put("description", "");
+
+                        stable.put("major", 0);
+                        stable.put("minor", 0);
+                        stable.put("patch", 0);
+                        stable.put("description", "");
+                    }
+
+                    channelsNode.put("stable", stable);
+                    channelsNode.put("latest", latest);
+
+                    minecraftNode.put("channels", channelsNode);
+
+                    modNode.put(minecraftVersion, minecraftNode);
+
+                    data.put(jsonName, modNode);
+                }
+                else
+                {
+                    Map<String, Object> channelsNode = (Map<String, Object>) minecraftNode.get("channels");
+
+                    if (!channelsNode.containsKey("stable") || (channelsNode.containsKey("stable") && !(channelsNode.get("stable") instanceof Map)))
+                    {
+                        channelsNode.remove("stable");
+
+                        Map<String, Object> stable = newMap();
+
+                        // TODO Description
+                        if (isStable)
+                        {
+                            stable.put("major", version.major);
+                            stable.put("minor", version.minor);
+                            stable.put("patch", version.patch);
+                            stable.put("description", "");
+                        }
+                        else
+                        {
+                            stable.put("major", 0);
+                            stable.put("minor", 0);
+                            stable.put("patch", 0);
+                            stable.put("description", "");
+                        }
+
+                        channelsNode.put("stable", stable);
+
+                        minecraftNode.put("channels", channelsNode);
+
+                        modNode.put(minecraftVersion, minecraftNode);
+
+                        data.put(jsonName, modNode);
+                    }
+                    else
+                    {
+                        // TODO Description
+                        if (isStable)
+                        {
+                            Map<String, Object> stable = (Map<String, Object>) channelsNode.get("stable");
+
+                            stable.put("major", version.major);
+                            stable.put("minor", version.minor);
+                            stable.put("patch", version.patch);
+                            stable.put("description", "");
+
+                            channelsNode.put("stable", stable);
+
+                            minecraftNode.put("channels", channelsNode);
+
+                            modNode.put(minecraftVersion, minecraftNode);
+
+                            data.put(jsonName, modNode);
+                        }
+                    }
+
+                    if (!channelsNode.containsKey("latest") || (channelsNode.containsKey("latest") && !(channelsNode.get("latest") instanceof Map)))
+                    {
+                        channelsNode.remove("latest");
+
+                        Map<String, Object> latest = newMap();
+
+                        // TODO Description
+                        if (isStable)
+                        {
+                            latest.put("major", 0);
+                            latest.put("minor", 0);
+                            latest.put("patch", 0);
+                            latest.put("postfix", null);
+                            latest.put("number", 0);
+                            latest.put("description", "");
+                        }
+                        else
+                        {
+                            latest.put("major", version.major);
+                            latest.put("minor", version.minor);
+                            latest.put("patch", version.patch);
+                            latest.put("postfix", version.getChannel().getKey());
+                            latest.put("number", version.number);
+                            latest.put("description", "");
+                        }
+
+                        channelsNode.put("latest", latest);
+
+                        minecraftNode.put("channels", channelsNode);
+
+                        modNode.put(minecraftVersion, minecraftNode);
+
+                        data.put(jsonName, modNode);
+                    }
+                    else
+                    {
+                        // TODO Description
+                        if (!isStable)
+                        {
+                            Map<String, Object> latest = (Map<String, Object>) channelsNode.get("latest");
+
+                            latest.put("major", version.major);
+                            latest.put("minor", version.minor);
+                            latest.put("patch", version.patch);
+                            latest.put("postfix", version.getChannel().getKey());
+                            latest.put("number", version.number);
+                            latest.put("description", "");
+
+                            channelsNode.put("latest", latest);
+
+                            minecraftNode.put("channels", channelsNode);
+
+                            modNode.put(minecraftVersion, minecraftNode);
+
+                            data.put(jsonName, modNode);
+                        }
+                    }
+                }
+            }
+        }
+
+        Map<String, String> args = Maps.newHashMap();
+        args.put("file", filesmaven + "/data.json");
+        invokeAnt("delete", args);
+
+        File json = project.file(filesmaven + "/data.json");
+
+        FileUtils.writeStringToFile(json, new Gson().toJson(data));
+    }
+
+    private <K, V> Map<K, V> newMap()
+    {
+        return new HashMap<K, V>();
     }
 
     public DefaultTask makeTask(String name)

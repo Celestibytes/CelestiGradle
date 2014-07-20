@@ -124,32 +124,33 @@ uploadArchives {
                     groupId = project.group
                     version = project.version
                     artifactId = project.archivesBaseName
-                    project {
-                        name project.archivesBaseName
-                        packaging 'jar'
-                        description 'Gradle plugin based on ForgeGradle'
+                }
+
+                pom.project {
+                    name project.archivesBaseName
+                    packaging 'jar'
+                    description 'Gradle plugin based on ForgeGradle'
+                    url 'https://github.com/Celestibytes/CelestiGradle'
+
+                    scm {
                         url 'https://github.com/Celestibytes/CelestiGradle'
-
-                        scm {
-                            url 'https://github.com/Celestibytes/CelestiGradle'
-                            connection 'scm:git:git://github.com/Celestibytes/CelestiGradle.git'
-                            developerConnection 'scm:git:git@github.com:Celestibytes/CelestiGradle.git'
-                        }
-
-                        issueManagement {
-                            system 'github'
-                            url 'https://github.com/Celestibytes/CelestiGradle/issues'
-                        }
-
-                        developers {
-                            developer {
-                                id 'PizzAna'
-                                name 'PizzAna'
-                                roles {role 'developer'}
-                            }
-                        }
-
+                        connection 'scm:git:git://github.com/Celestibytes/CelestiGradle.git'
+                        developerConnection 'scm:git:git@github.com:Celestibytes/CelestiGradle.git'
                     }
+
+                    issueManagement {
+                        system 'github'
+                        url 'https://github.com/Celestibytes/CelestiGradle/issues'
+                    }
+
+                    developers {
+                        developer {
+                            id 'PizzAna'
+                            name 'PizzAna'
+                            roles {role 'developer'}
+                        }
+                    }
+
                 }
             }
         }

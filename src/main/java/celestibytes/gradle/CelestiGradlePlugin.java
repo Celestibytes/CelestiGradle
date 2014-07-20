@@ -452,6 +452,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         processJson.doLast(new Action<Task>()
         {
             @Override
+            @SuppressWarnings("unchecked")
             public void execute(Task task)
             {
                 try
@@ -485,6 +486,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         release.dependsOn(processJson);
     }
 
+    @SuppressWarnings("unchecked")
     private void processMaps(Map<String, Object> data) throws IOException
     {
         if (!data.containsKey(jsonName) || (data.containsKey(jsonName) && !(data.get(jsonName) instanceof Map)))

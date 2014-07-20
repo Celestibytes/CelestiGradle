@@ -89,6 +89,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         jsonName = projectName.toLowerCase();
         version = Version.parse((String) project.getVersion());
 
+        displayBanner();
+
         applyPlugins();
         resolveProperties();
         addRepositories();
@@ -268,10 +270,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         try
         {
-            String baublesMc = getCWVersion("BAUBLES_MC");
-            String baubles = getCWVersion("BAUBLES");
+            String baublesMc = getCWVersion(project, "BAUBLES_MC");
+            String baubles = getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = getProperty("src/main/java/" + dir + "/reference/Reference.java", "BAUBLES_ROOT");
+            String baublesRoot = getProperty(project, "src/main/java/" + dir + "/reference/Reference.java", "BAUBLES_ROOT");
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 
@@ -831,38 +833,38 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return pattern;
     }
 
-    public static String getCWVersion(String field) throws IOException
+    public static String getCWVersion(Project project, String field) throws IOException
     {
-        return getProperty("src/main/java/celestibytes/celestialwizardry/reference/Versions.java", field);
+        return getProperty(project, "src/main/java/celestibytes/celestialwizardry/reference/Versions.java", field);
     }
 
-    public static String getDgCVersion(String field) throws IOException
+    public static String getDgCVersion(Project project, String field) throws IOException
     {
-        return getProperty("src/main/java/pizzana/doughcraft/reference/Versions.java", field);
+        return getProperty(project, "src/main/java/pizzana/doughcraft/reference/Versions.java", field);
     }
 
-    public static String getCGVersion(String field) throws IOException
+    public static String getCGVersion(Project project, String field) throws IOException
     {
-        return getProperty("src/main/java/celestibytes/gradle/reference/Versions.java", field);
+        return getProperty(project, "src/main/java/celestibytes/gradle/reference/Versions.java", field);
     }
 
-    public static String getCoreVersion(String field) throws IOException
+    public static String getCoreVersion(Project project, String field) throws IOException
     {
-        return getProperty("src/main/java/celestibytes/core/reference/Versions.java", field);
+        return getProperty(project, "src/main/java/celestibytes/core/reference/Versions.java", field);
     }
 
-    public static String getTTVersion(String field) throws IOException
+    public static String getTTVersion(Project project, String field) throws IOException
     {
-        return getProperty("src/celestibytes/tankytanks/reference/Versions.java", field);
+        return getProperty(project, "src/celestibytes/tankytanks/reference/Versions.java", field);
     }
 
     @SuppressWarnings("unchecked")
-    public static String getProperty(String file, String field) throws IOException
+    public static String getProperty(Project project, String file, String field) throws IOException
     {
         String property = "unknown";
 
         String prefix = "public static final String " + field;
-        List<String> lines = (List<String>) FileUtils.readLines(projectStatic.file(file));
+        List<String> lines = (List<String>) FileUtils.readLines(project.file(file));
 
         for (String s : lines)
         {

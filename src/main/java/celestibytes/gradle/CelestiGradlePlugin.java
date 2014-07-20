@@ -24,6 +24,7 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
+import org.gradle.api.tasks.Upload;
 import org.gradle.api.tasks.bundling.Jar;
 
 import java.io.File;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
@@ -45,6 +47,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private String basePackage;
     private Closure manifest;
+
+    private String filesmaven;
 
     private boolean addManifest;
     private String dir;
@@ -111,6 +115,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         else
         {
             manifest = null;
+        }
+
+        if (project.hasProperty("filesmaven"))
+        {
+            filesmaven = (String) project.property("filesmaven");
+        }
+        else
+        {
+            filesmaven = ".";
         }
 
         // Always last

@@ -68,19 +68,19 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             makeBaublesTask();
             makeCWPackageTasks();
-            makeCWSignTask();
+            makeSignTask();
         }
 
         if (projectName.toLowerCase().equals(Reference.DGC_NAME.toLowerCase()))
         {
             makeDgCPackageTasks();
-            makeDgCSignTask();
+            makeSignTask();
         }
 
         if (projectName.toLowerCase().equals(Reference.CORE_NAME.toLowerCase()))
         {
             makeCorePackageTasks();
-            makeCoreSignTask();
+            makeSignTask();
         }
 
         makeLifecycleTasks();
@@ -182,6 +182,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
+    @Deprecated
     public void makeCWPackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
@@ -260,47 +261,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getArtifacts().add("archives", deobf);
     }
 
-    public void makeCWSignTask()
-    {
-        final Jar jar = (Jar) project.getTasks().getByName("jar");
-        final File jarPath = jar.getArchivePath();
-        final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
-        final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
-        final String keystorePassword = (String) project.getProperties().get("keystore_password");
-
-        DefaultTask signJar = makeTask("signJar", DefaultTask.class);
-        signJar.getInputs().file(jarPath);
-        signJar.getInputs().file(keystoreLocation);
-        signJar.getInputs().property("keystore_alias", keystoreAlias);
-        signJar.getInputs().property("keystore_password", keystorePassword);
-        signJar.getOutputs().file(jarPath);
-        signJar.onlyIf(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                return !keystoreLocation.getPath().equals(".");
-            }
-        });
-        signJar.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("destDir", jar.getDestinationDir().getPath());
-                args.put("jar", jarPath.getPath());
-                args.put("keystore", keystoreLocation.getPath());
-                args.put("alias", keystoreAlias);
-                args.put("storepass", keystorePassword);
-                invokeAnt("signjar", args);
-            }
-        });
-        signJar.dependsOn("build");
-
-        project.getTasks().getByName("uploadArchives").dependsOn(signJar);
-    }
-
+    @Deprecated
     public void makeDgCPackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
@@ -379,47 +340,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getArtifacts().add("archives", deobf);
     }
 
-    public void makeDgCSignTask()
-    {
-        final Jar jar = (Jar) project.getTasks().getByName("jar");
-        final File jarPath = jar.getArchivePath();
-        final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
-        final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
-        final String keystorePassword = (String) project.getProperties().get("keystore_password");
-
-        DefaultTask signJar = makeTask("signJar", DefaultTask.class);
-        signJar.getInputs().file(jarPath);
-        signJar.getInputs().file(keystoreLocation);
-        signJar.getInputs().property("keystore_alias", keystoreAlias);
-        signJar.getInputs().property("keystore_password", keystorePassword);
-        signJar.getOutputs().file(jarPath);
-        signJar.onlyIf(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                return !keystoreLocation.getPath().equals(".");
-            }
-        });
-        signJar.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
-            {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("destDir", jar.getDestinationDir().getPath());
-                args.put("jar", jarPath.getPath());
-                args.put("keystore", keystoreLocation.getPath());
-                args.put("alias", keystoreAlias);
-                args.put("storepass", keystorePassword);
-                invokeAnt("signjar", args);
-            }
-        });
-        signJar.dependsOn("build");
-
-        project.getTasks().getByName("uploadArchives").dependsOn(signJar);
-    }
-
+    @Deprecated
     public void makeCorePackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
@@ -490,7 +411,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getArtifacts().add("archives", deobf);
     }
 
-    public void makeCoreSignTask()
+    private void makeSignTask()
     {
         final Jar jar = (Jar) project.getTasks().getByName("jar");
         final File jarPath = jar.getArchivePath();
@@ -498,7 +419,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
         final String keystorePassword = (String) project.getProperties().get("keystore_password");
 
-        DefaultTask signJar = makeTask("signJar", DefaultTask.class);
+        DefaultTask signJar = makeTask("signJar");
         signJar.getInputs().file(jarPath);
         signJar.getInputs().file(keystoreLocation);
         signJar.getInputs().property("keystore_alias", keystoreAlias);
@@ -533,7 +454,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void makeLifecycleTasks()
     {
-        DefaultTask release = makeTask("release", DefaultTask.class);
+        DefaultTask release = makeTask("release");
         release.setDescription("Wrapper task for building release-ready archives.");
         release.setGroup(Reference.NAME);
         release.dependsOn("uploadArchives");

@@ -61,6 +61,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private String coreVersion;
 
     private String basePackage;
+    private List<String> artifactsList;
     private Closure manifest;
 
     private String filesmaven;
@@ -89,6 +90,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         makeLifecycleTasks();
     }
 
+    @SuppressWarnings("unchecked")
     private void resolveProperties()
     {
         if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
@@ -129,6 +131,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         else
         {
             throw new NullPointerException("No String property \"basePackage\" found from the project.");
+        }
+
+        if (project.hasProperty("artifactsList"))
+        {
+            artifactsList = (List<String>) project.property("artifactsList");
+        }
+        else
+        {
+            throw new NullPointerException("No List<String> property \"artifactsList\" found from the project.");
         }
 
         if (project.hasProperty("manifest"))
@@ -186,19 +197,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void makeProjectTasks()
     {
-        List<String> artifacts = new ArrayList<String>();
-
-        artifacts.add("javadoc");
-        artifacts.add("sources");
-        artifacts.add("dev");
-
         if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
         {
-            makePackageTasks(artifacts);
+            makePackageTasks();
             makeSignTask();
         }
-
-        artifacts.add("api");
 
         if (projectName.toLowerCase().equals(Projects.CW.toLowerCase()))
         {
@@ -218,13 +221,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 }
             };
 
-            makePackageTasks(artifacts);
+            makePackageTasks();
             makeSignTask();
         }
 
         if (projectName.toLowerCase().equals(Projects.DGC.toLowerCase()))
         {
-            makePackageTasks(artifacts);
+            makePackageTasks();
             makeSignTask();
         }
     }
@@ -319,7 +322,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
-    private void makePackageTasks(List<String> artifacts)
+    private void makePackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
 
@@ -344,7 +347,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         jar.dependsOn(changelog);
 
-        if (artifacts.contains("javadoc"))
+        if (artifactsList.contains("javadoc"))
         {
             Jar javadocJar = makeTask("javadocJar", Jar.class);
             javadocJar.setClassifier("javadoc");
@@ -354,7 +357,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             project.getArtifacts().add("archives", javadocJar);
         }
 
-        if (artifacts.contains("sources") || artifacts.contains("src"))
+        if (artifactsList.contains("sources") || artifactsList.contains("src"))
         {
             Jar sourcesJar = makeTask("sourcesJar", Jar.class);
             sourcesJar.setClassifier("sources");
@@ -372,7 +375,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             project.getArtifacts().add("archives", sourcesJar);
         }
 
-        if (artifacts.contains("api"))
+        if (artifactsList.contains("api"))
         {
             String apiDir = dir + "/api/";
 
@@ -384,7 +387,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             project.getArtifacts().add("archives", apiJar);
         }
 
-        if (artifacts.contains("dev") || artifacts.contains("deobf"))
+        if (artifactsList.contains("dev") || artifactsList.contains("deobf"))
         {
             Jar devJar = makeTask("devJar", Jar.class);
             devJar.setClassifier("dev");

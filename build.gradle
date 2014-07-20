@@ -1,23 +1,18 @@
-/* buildscript {
-    repositories {
-        mavenCentral()
-        maven {
-            name = "cbs"
-            url = "http://celestibytes.github.io/maven/"
-        }
-    }
-    dependencies {
-        classpath 'io.github.pizzana:JKaffe:1.2.3'
-    }
-} */
-
+/**
+ * Celestibytes Gradle Plugin
+ * CelestiGradle
+ *
+ * Master build script
+ *
+ * @author PizzAna
+ */
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.celestibytes'
-version = "1.6.0-alpha.2"
+version = "1.6.0-alpha.3"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
@@ -124,7 +119,7 @@ uploadArchives {
                 pom.project {
                     name project.archivesBaseName
                     packaging 'jar'
-                    description 'Gradle plugin based on ForgeGradle'
+                    description 'Gradle plugin for building Celestibytes projects. ForgeGradle included.'
                     url 'https://github.com/Celestibytes/CelestiGradle'
 
                     scm {

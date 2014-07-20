@@ -11,6 +11,7 @@ import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
+import celestibytes.gradle.reference.Versions;
 import celestibytes.pizzana.version.Version;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
@@ -52,6 +53,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static final String NUMBER = "number";
     private static final String DESCRIPTION = "description";
 
+    private static Project projectStatic;
+    private static boolean fg;
+
     private Project project;
     private String projectName;
 
@@ -63,31 +67,46 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private String basePackage;
     private List<String> artifactsList;
     private Closure manifest;
+    private boolean hasKeystore;
 
     private String filesmaven;
 
     private boolean addManifest;
     private String dir;
 
+    private boolean versionCheck;
     private String jsonName;
     private Version version;
     private boolean isStable;
-
     private String minecraftVersion;
 
     @Override
     public void apply(Project project)
     {
+        projectStatic = project;
+        fg = project.getPlugins().hasPlugin("forge");
         this.project = project;
         projectName = project.getName();
         jsonName = projectName.toLowerCase();
         version = Version.parse((String) project.getVersion());
 
+        applyPlugins();
         resolveProperties();
         addRepositories();
         addDependencies();
         makeProjectTasks();
         makeLifecycleTasks();
+    }
+
+    private void applyPlugins()
+    {
+        if (!fg)
+        {
+            applyExternalPlugin("java");
+            applyExternalPlugin("maven");
+            applyExternalPlugin("eclipse");
+            applyExternalPlugin("idea");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -168,6 +187,17 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             throw new NullPointerException("No String property \"minecraftVersion\" found from the project.");
         }
+
+        if (project.hasProperty("versionCheck"))
+        {
+            versionCheck = (Boolean) project.property("versionCheck");
+        }
+        else
+        {
+            throw new NullPointerException("No boolean property \"versionCheck\" found from the project.");
+        }
+
+        hasKeystore = project.hasProperty("keystoreLocation");
 
         // Always last
         addManifest = manifest != null;
@@ -427,7 +457,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             @Override
             public boolean isSatisfiedBy(Task task)
             {
-                return !keystoreLocation.getPath().equals(".");
+                return hasKeystore;
             }
         });
         signJar.doLast(new Action<Task>()
@@ -452,6 +482,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private void makeLifecycleTasks()
     {
         DefaultTask processJson = makeTask("processJson");
+        processJson.onlyIf(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                return versionCheck;
+            }
+        });
         processJson.doLast(new Action<Task>()
         {
             @Override
@@ -688,6 +726,22 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return new HashMap<K, V>();
     }
 
+    public static void displayBanner()
+    {
+        projectStatic.getLogger().lifecycle("****************************");
+        projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
+        projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);
+
+        if (fg)
+        {
+            projectStatic.getLogger().lifecycle(" ForgeGradle enabled        ");
+        }
+        else
+        {
+            projectStatic.getLogger().lifecycle("****************************");
+        }
+    }
+
     public DefaultTask makeTask(String name)
     {
         return makeTask(name, DefaultTask.class);
@@ -699,7 +753,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
+    private static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
     {
         HashMap<String, Object> map = new HashMap<String, Object>();
         map.put("name", name);

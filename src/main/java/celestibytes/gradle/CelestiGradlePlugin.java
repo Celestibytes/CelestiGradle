@@ -111,35 +111,47 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     @SuppressWarnings("unchecked")
     private void resolveProperties()
     {
-        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
+        if (fg)
         {
-            core = false;
-        }
-        else
-        {
-            if (project.hasProperty("core"))
+            if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
             {
-                core = (Boolean) project.property("core");
+                core = false;
             }
             else
             {
-                throw new NullPointerException("No boolean property \"core\" found from the project.");
+                if (project.hasProperty("core"))
+                {
+                    core = (Boolean) project.property("core");
+                }
+                else
+                {
+                    throw new NullPointerException("No boolean property \"core\" found from the project.");
+                }
             }
-        }
 
-        if (core)
-        {
-            if (project.hasProperty("coreVersion"))
+            if (core)
             {
-                coreVersion = (String) project.property("coreVersion");
+                if (project.hasProperty("coreVersion"))
+                {
+                    coreVersion = (String) project.property("coreVersion");
+                }
+                else
+                {
+                    throw new NullPointerException("No String property \"coreVersion\" found from the project.");
+                }
+
+                coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
+                coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
+            }
+
+            if (project.hasProperty("minecraftVersion"))
+            {
+                minecraftVersion = (String) project.property("minecraftVersion");
             }
             else
             {
-                throw new NullPointerException("No String property \"coreVersion\" found from the project.");
+                throw new NullPointerException("No String property \"minecraftVersion\" found from the project.");
             }
-
-            coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
-            coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
         }
 
         if (project.hasProperty("basePackage"))
@@ -176,15 +188,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         else
         {
             filesmaven = ".";
-        }
-
-        if (project.hasProperty("minecraftVersion"))
-        {
-            minecraftVersion = (String) project.property("minecraftVersion");
-        }
-        else
-        {
-            throw new NullPointerException("No String property \"minecraftVersion\" found from the project.");
         }
 
         if (project.hasProperty("versionCheck"))

@@ -448,7 +448,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void makeSignTask()
     {
-        final Jar jar = (Jar) project.getTasks().getByName("jar");
+        // TODO
+        /* final Jar jar = (Jar) project.getTasks().getByName("jar");
         final File jarPath = jar.getArchivePath();
         final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
         final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
@@ -484,7 +485,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         });
         signJar.dependsOn("build");
 
-        project.getTasks().getByName("uploadArchives").dependsOn(signJar);
+        project.getTasks().getByName("uploadArchives").dependsOn(signJar); */
     }
 
     private void makeLifecycleTasks()

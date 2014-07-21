@@ -1,20 +1,22 @@
 package celestibytes.gradle.reference;
 
 import groovy.lang.Closure;
+import org.gradle.api.ProjectConfigurationException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class CelestiExtension
 {
-    public String version = "null";
-    public boolean core;
-    public String coreVersion = "null";
-    public String minecraftVersion = "null";
-    public String basePackage = "null";
+    public String version;
+    public boolean minecraftMod = false;
+    public boolean coreDependant = false;
+    public String coreVersion;
+    public String minecraftVersion;
+    public String basePackage;
     public List<String> artifactsList = new ArrayList<String>();
     public Closure manifest = null;
-    public boolean versionCheck = false;
+    public boolean versionCheckable = false;
 
     public CelestiExtension()
     {
@@ -22,6 +24,11 @@ public class CelestiExtension
 
     public String getVersion()
     {
+        if (version == null)
+        {
+            throw new ProjectConfigurationException("You must set version!", new NullPointerException());
+        }
+
         return version;
     }
 
@@ -30,25 +37,43 @@ public class CelestiExtension
         this.version = version;
     }
 
-    // DON'T TOUCH ME, I'M HERE ONLY TO MAKE INTELLIJ IDEA HAPPY
-    @SuppressWarnings("unused")
-    private boolean isCore()
+    public boolean isMinecraftMod()
     {
-        return core;
+        return minecraftMod;
     }
 
-    public boolean getCore()
+    public boolean getMinecraftMod()
     {
-        return core;
+        return minecraftMod;
     }
 
-    public void setCore(boolean core)
+    public void setMinecraftMod(boolean minecraftMod)
     {
-        this.core = core;
+        this.minecraftMod = minecraftMod;
+    }
+
+    public boolean isCoreDependant()
+    {
+        return coreDependant;
+    }
+
+    public boolean getCoreDependant()
+    {
+        return coreDependant;
+    }
+
+    public void setCoreDependant(boolean coreDependant)
+    {
+        this.coreDependant = coreDependant;
     }
 
     public String getCoreVersion()
     {
+        if (coreVersion == null)
+        {
+            throw new ProjectConfigurationException("You must set coreVersion!", new NullPointerException());
+        }
+
         return coreVersion;
     }
 
@@ -59,6 +84,11 @@ public class CelestiExtension
 
     public String getMinecraftVersion()
     {
+        if (minecraftVersion == null)
+        {
+            throw new ProjectConfigurationException("You must set minecraftVersion!", new NullPointerException());
+        }
+
         return minecraftVersion;
     }
 
@@ -69,6 +99,11 @@ public class CelestiExtension
 
     public String getBasePackage()
     {
+        if (basePackage == null)
+        {
+            throw new ProjectConfigurationException("You must set basePackage!", new NullPointerException());
+        }
+
         return basePackage;
     }
 
@@ -102,20 +137,18 @@ public class CelestiExtension
         this.manifest = manifest;
     }
 
-    // DON'T TOUCH ME, I'M HERE ONLY TO MAKE INTELLIJ IDEA HAPPY
-    @SuppressWarnings("unused")
-    private boolean isVersionCheck()
+    public boolean isVersionCheckable()
     {
-        return versionCheck;
+        return versionCheckable;
     }
 
-    public boolean getVersionCheck()
+    public boolean getVersionCheckable()
     {
-        return versionCheck;
+        return versionCheckable;
     }
 
-    public void setVersionCheck(boolean versionCheck)
+    public void setVersionCheckable(boolean versionCheckable)
     {
-        this.versionCheck = versionCheck;
+        this.versionCheckable = versionCheckable;
     }
 }

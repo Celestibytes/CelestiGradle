@@ -58,27 +58,35 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private Project project;
     private String projectName;
+    private String jsonName;
 
-    private boolean core;
+    private Version version;
+    private String versionNumber;
+
+    private boolean isMinecraftMod;
+    private boolean needsCore;
+    private String coreVersion;
     private String coreArtifact;
     private String coreDevArtifact;
-    private String coreVersion;
+    private String minecraftVersion;
 
     private String basePackage;
+
     private List<String> artifactsList;
+
     private Closure manifest;
-    private boolean hasKeystore;
+
+    private boolean hasVersionCheck;
 
     private String filesmaven;
 
+    private boolean hasKeystore;
+
     private boolean addManifest;
+
     private String dir;
 
-    private boolean versionCheck;
-    private String jsonName;
-    private Version version;
     private boolean isStable;
-    private String minecraftVersion;
 
     @Override
     public void apply(Project project)
@@ -88,20 +96,63 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         this.project = project;
         projectName = project.getName();
         jsonName = projectName.toLowerCase();
-        version = Version.parse((String) project.property("versionNumber"));
 
-        project.getExtensions().create("celestibytes", CelestiExtension.class);
+        project.getExtensions().create(Reference.EXTENSION, CelestiExtension.class);
 
-        project.getLogger().lifecycle("I am version " + ((CelestiExtension) project.getExtensions().getByName("celestibytes")).getVersion());
+        if (!fg)
+        {
+            displayBanner();
+        }
 
-        displayBanner();
-
-        applyPlugins();
         resolveProperties();
+        applyPlugins();
         addRepositories();
         addDependencies();
         makeProjectTasks();
         makeLifecycleTasks();
+    }
+
+    private void resolveProperties()
+    {
+        versionNumber = getExtension().getVersion();
+        version = Version.parse(versionNumber);
+
+        isMinecraftMod = getExtension().getMinecraftMod();
+
+        if (isMinecraftMod)
+        {
+            needsCore = getExtension().getCoreDependant();
+
+            if (needsCore)
+            {
+                coreVersion = getExtension().getCoreVersion();
+
+                coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
+                coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
+            }
+
+            minecraftVersion = getExtension().getMinecraftVersion();
+        }
+
+        basePackage = getExtension().getBasePackage();
+        artifactsList = getExtension().getArtifactsList();
+        manifest = getExtension().getManifest();
+        hasVersionCheck = getExtension().getVersionCheckable();
+
+        if (project.hasProperty("filesmaven"))
+        {
+            filesmaven = (String) project.property("filesmaven");
+        }
+        else
+        {
+            filesmaven = "./files";
+        }
+
+        hasKeystore = project.hasProperty("keystoreLocation");
+
+        addManifest = manifest != null;
+        dir = basePackage.replace('.', '/');
+        isStable = version.isStable();
     }
 
     private void applyPlugins()
@@ -113,105 +164,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             applyExternalPlugin("eclipse");
             applyExternalPlugin("idea");
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void resolveProperties()
-    {
-        if (fg)
-        {
-            if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
-            {
-                core = false;
-            }
-            else
-            {
-                if (project.hasProperty("core"))
-                {
-                    core = (Boolean) project.property("core");
-                }
-                else
-                {
-                    throw new NullPointerException("No boolean property \"core\" found from the project.");
-                }
-            }
-
-            if (core)
-            {
-                if (project.hasProperty("coreVersion"))
-                {
-                    coreVersion = (String) project.property("coreVersion");
-                }
-                else
-                {
-                    throw new NullPointerException("No String property \"coreVersion\" found from the project.");
-                }
-
-                coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
-                coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
-            }
-
-            if (project.hasProperty("minecraftVersion"))
-            {
-                minecraftVersion = (String) project.property("minecraftVersion");
-            }
-            else
-            {
-                throw new NullPointerException("No String property \"minecraftVersion\" found from the project.");
-            }
-        }
-
-        if (project.hasProperty("basePackage"))
-        {
-            basePackage = (String) project.property("basePackage");
-        }
-        else
-        {
-            throw new NullPointerException("No String property \"basePackage\" found from the project.");
-        }
-
-        if (project.hasProperty("artifactsList"))
-        {
-            artifactsList = (List<String>) project.property("artifactsList");
-        }
-        else
-        {
-            throw new NullPointerException("No List<String> property \"artifactsList\" found from the project.");
-        }
-
-        if (project.hasProperty("manifest"))
-        {
-            manifest = (Closure) project.property("manifest");
-        }
-        else
-        {
-            manifest = null;
-        }
-
-        if (project.hasProperty("filesmaven"))
-        {
-            filesmaven = (String) project.property("filesmaven");
-        }
-        else
-        {
-            filesmaven = "./files";
-        }
-
-        if (project.hasProperty("versionCheck"))
-        {
-            versionCheck = (Boolean) project.property("versionCheck");
-        }
-        else
-        {
-            throw new NullPointerException("No boolean property \"versionCheck\" found from the project.");
-        }
-
-        hasKeystore = project.hasProperty("keystoreLocation");
-
-        // Always last
-        addManifest = manifest != null;
-        dir = basePackage.replace('.', '/');
-        isStable = version.isStable();
     }
 
     private void addRepositories()
@@ -228,7 +180,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void addDependencies()
     {
-        if (core)
+        if (needsCore)
         {
             project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
         }
@@ -448,44 +400,48 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private void makeSignTask()
     {
-        // TODO
-        /* final Jar jar = (Jar) project.getTasks().getByName("jar");
-        final File jarPath = jar.getArchivePath();
-        final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
-        final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
-        final String keystorePassword = (String) project.getProperties().get("keystore_password");
-
         DefaultTask signJar = makeTask("signJar");
-        signJar.getInputs().file(jarPath);
-        signJar.getInputs().file(keystoreLocation);
-        signJar.getInputs().property("keystore_alias", keystoreAlias);
-        signJar.getInputs().property("keystore_password", keystorePassword);
-        signJar.getOutputs().file(jarPath);
-        signJar.onlyIf(new Spec<Task>()
+
+        if (hasKeystore)
         {
-            @Override
-            public boolean isSatisfiedBy(Task task)
+            final Jar jar = (Jar) project.getTasks().getByName("jar");
+            final File jarPath = jar.getArchivePath();
+            final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
+            final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
+            final String keystorePassword = (String) project.getProperties().get("keystore_password");
+
+            signJar.getInputs().file(jarPath);
+            signJar.getInputs().file(keystoreLocation);
+            signJar.getInputs().property("keystore_alias", keystoreAlias);
+            signJar.getInputs().property("keystore_password", keystorePassword);
+            signJar.getOutputs().file(jarPath);
+            signJar.onlyIf(new Spec<Task>()
             {
-                return hasKeystore;
-            }
-        });
-        signJar.doLast(new Action<Task>()
-        {
-            @Override
-            public void execute(Task task)
+                @Override
+                public boolean isSatisfiedBy(Task task)
+                {
+                    return hasKeystore;
+                }
+            });
+            signJar.doLast(new Action<Task>()
             {
-                Map<String, String> args = Maps.newHashMap();
-                args.put("destDir", jar.getDestinationDir().getPath());
-                args.put("jar", jarPath.getPath());
-                args.put("keystore", keystoreLocation.getPath());
-                args.put("alias", keystoreAlias);
-                args.put("storepass", keystorePassword);
-                invokeAnt("signjar", args);
-            }
-        });
+                @Override
+                public void execute(Task task)
+                {
+                    Map<String, String> args = Maps.newHashMap();
+                    args.put("destDir", jar.getDestinationDir().getPath());
+                    args.put("jar", jarPath.getPath());
+                    args.put("keystore", keystoreLocation.getPath());
+                    args.put("alias", keystoreAlias);
+                    args.put("storepass", keystorePassword);
+                    invokeAnt("signjar", args);
+                }
+            });
+        }
+
         signJar.dependsOn("build");
 
-        project.getTasks().getByName("uploadArchives").dependsOn(signJar); */
+        project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
 
     private void makeLifecycleTasks()
@@ -496,7 +452,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             @Override
             public boolean isSatisfiedBy(Task task)
             {
-                return versionCheck;
+                return hasVersionCheck;
             }
         });
         processJson.doLast(new Action<Task>()
@@ -837,6 +793,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         pattern = pattern.replace("{CORE_VERSION}", coreVersion);
         pattern = pattern.replace("{CORE_NAME}", Projects.CORE);
         return pattern;
+    }
+
+    private CelestiExtension getExtension()
+    {
+        return (CelestiExtension) project.getExtensions().getByName(Reference.EXTENSION);
     }
 
     public static String getCWVersion(Project project, String field) throws IOException

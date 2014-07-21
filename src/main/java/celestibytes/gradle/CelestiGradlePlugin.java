@@ -9,6 +9,7 @@ import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
+import celestibytes.gradle.reference.CelestiExtension;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.gradle.reference.Versions;
@@ -88,6 +89,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         projectName = project.getName();
         jsonName = projectName.toLowerCase();
         version = Version.parse((String) project.property("versionNumber"));
+
+        project.getExtensions().create("celestibytes", CelestiExtension.class);
+
+        project.getLogger().lifecycle("I am version " + ((CelestiExtension) project.getExtensions().getByName("celestibytes")).getVersion());
 
         displayBanner();
 

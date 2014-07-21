@@ -54,33 +54,34 @@ public final class Version implements Comparable<Version>
         {
             if (c != '.')
             {
-                if (dots == 0)
-                {
-                    major = major + c;
-                }
-                else if (dots == 1)
-                {
-                    minor = minor + c;
-                }
-                else if (dots == 2)
-                {
-                    patch = patch + c;
-                }
-                else if (dots == 3)
-                {
-                    number = number + c;
-                }
-
                 if (c == '-')
                 {
                     hyphen = true;
                 }
-
-                if (hyphen)
+                else
                 {
-                    if (dots == 2)
+                    if (dots == 0)
                     {
-                        channel = channel + c;
+                        major = major + c;
+                    }
+                    else if (dots == 1)
+                    {
+                        minor = minor + c;
+                    }
+                    else if (dots == 2)
+                    {
+                        if (hyphen)
+                        {
+                            channel = channel + c;
+                        }
+                        else
+                        {
+                            patch = patch + c;
+                        }
+                    }
+                    else if (dots == 3)
+                    {
+                        number = number + c;
                     }
                 }
             }

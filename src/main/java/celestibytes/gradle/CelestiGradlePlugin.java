@@ -67,7 +67,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static boolean isMinecraftMod = false;
     private static String minecraftVersion;
     private static boolean needsCore = false;
-    private static String coreVersion;
+    private static String coreVersion = "";
 
     private static String basePackage;
     private static String dir;
@@ -77,14 +77,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static Closure manifest;
     private static boolean hasManifest = false;
 
+    private static String coreArtifact = "";
+    private static String coreDevArtifact = "";
+
     private Project project;
     private String projectName;
     private String jsonName;
 
     private Version version;
-
-    private String coreArtifact;
-    private String coreDevArtifact;
 
     private String filesmaven;
 
@@ -145,9 +145,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     throw new ProjectConfigurationException("You must set the core version number!",
                                                             new NullPointerException());
                 }
-
-                coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
-                coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
             }
 
             if (minecraftVersion == null)
@@ -904,6 +901,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         needsCore = true;
         coreVersion = version;
+        coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
+        coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
         return version;
     }
 

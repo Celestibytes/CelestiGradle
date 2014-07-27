@@ -129,7 +129,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         if (fg && !isMinecraftMod)
         {
-            throw new ProjectConfigurationException("Project has forge plugin but isn't a Minecraft mod!", new DerpException());
+            throw new ProjectConfigurationException("Project has forge plugin but isn't a Minecraft mod!",
+                                                    new DerpException());
         }
 
         if (isMinecraftMod)
@@ -138,7 +139,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             {
                 if (coreVersion == null)
                 {
-                    throw new ProjectConfigurationException("You must set the core version number!", new NullPointerException());
+                    throw new ProjectConfigurationException("You must set the core version number!",
+                                                            new NullPointerException());
                 }
 
                 coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
@@ -147,7 +149,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
             if (minecraftVersion == null)
             {
-                throw new ProjectConfigurationException("You must set the minecraft version number!", new NullPointerException());
+                throw new ProjectConfigurationException("You must set the minecraft version number!",
+                                                        new NullPointerException());
             }
         }
 
@@ -245,7 +248,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             String baublesMc = getCWVersion(project, "BAUBLES_MC");
             String baubles = getCWVersion(project, "BAUBLES");
             String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = getProperty(project, "src/main/java/" + dir + "/reference/Reference.java", "BAUBLES_ROOT");
+            String baublesRoot = getProperty(project, "src/main/java/" + dir + "/reference/Reference.java",
+                                             "BAUBLES_ROOT");
             String baublesUrl = baublesRoot + baublesFile;
             final String baublesDest = "libs/" + baublesFile;
 

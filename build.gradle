@@ -12,7 +12,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.celestibytes'
-version = "1.6.0-alpha.4"
+version = "1.6.0-alpha.6"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'

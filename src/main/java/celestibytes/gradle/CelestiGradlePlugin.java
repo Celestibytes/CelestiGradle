@@ -493,9 +493,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
                     inputStream.close();
 
-                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
-
-                    processMaps(data);
+                    // Map<String, Object> data = new Gson().fromJson(json, Map.class);
+                    // processMaps(data);
                 }
                 catch (IOException e)
                 {

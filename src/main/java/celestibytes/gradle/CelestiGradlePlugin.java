@@ -49,16 +49,6 @@ import java.util.Map;
  */
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
-    private static final String CHANNELS = "channels";
-    private static final String STABLE = "stable";
-    private static final String LATEST = "latest";
-    private static final String MAJOR = "major";
-    private static final String MINOR = "minor";
-    private static final String PATCH = "patch";
-    private static final String POSTFIX = "postfix";
-    private static final String NUMBER = "number";
-    private static final String DESCRIPTION = "description";
-
     private static Project projectStatic;
     private static boolean fg;
 
@@ -85,9 +75,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private Project project;
     private String projectName;
-    private String jsonName;
-
-    private Version version;
 
     private String filesmaven;
 
@@ -103,7 +90,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         projectStatic = project;
         fg = project.getPlugins().hasPlugin("forge");
         projectName = project.getName();
-        jsonName = projectName.toLowerCase();
 
         FileLogListenner listener = new FileLogListenner(project.file(Constants.LOG));
         project.getLogging().addStandardOutputListener(listener);
@@ -130,8 +116,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             throw new ProjectConfigurationException("You must set the version number!", new NullPointerException());
         }
-
-        version = Version.parse(versionNumber);
 
         if (fg && !isMinecraftMod)
         {
@@ -173,7 +157,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         hasKeystore = project.hasProperty("keystoreLocation");
 
-        isStable = version.isStable();
+        isStable = Version.parse(versionNumber).isStable();
     }
 
     private void applyPlugins()

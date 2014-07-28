@@ -348,6 +348,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getTasks().getByName("build").dependsOn(changelog);
 
         Jar jar = (Jar) project.getTasks().getByName("jar");
+        jar.from(delayedFile(changelogFile));
 
         if (hasManifest)
         {

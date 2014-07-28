@@ -43,9 +43,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * TODO Version check json handling
- */
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
     private static Project projectStatic;
@@ -71,9 +68,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private static String versionCheckId;
     private static boolean hasVersionCheck = false;
+    private static String versionDescription;
+
+    private static String baublesVersion;
+    private static String baublesMinecraft;
+    private static boolean needsBaubles = false;
 
     private Project project;
-    private String projectName;
 
     private String filesmaven;
 
@@ -88,7 +89,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         projectStatic = project;
         fg = project.getPlugins().hasPlugin("forge");
-        projectName = project.getName();
 
         FileLogListenner listener = new FileLogListenner(project.file(Constants.LOG));
         project.getLogging().addStandardOutputListener(listener);
@@ -105,7 +105,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
 
         addDependencies();
-        makeProjectTasks();
+
+        if (needsBaubles)
+        {
+            makeBaublesTask();
+        }
+
+        makePackageTasks();
+        makeSignTask();
         makeLifecycleTasks();
     }
 
@@ -190,117 +197,82 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
-    private void makeProjectTasks()
-    {
-        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
-        {
-            makePackageTasks();
-            makeSignTask();
-        }
-
-        if (projectName.toLowerCase().equals(Projects.CW.toLowerCase()))
-        {
-            // TODO Make this un-hardcoded
-            makeBaublesTask();
-            makePackageTasks();
-            makeSignTask();
-        }
-
-        if (projectName.toLowerCase().equals(Projects.DGC.toLowerCase()))
-        {
-            makePackageTasks();
-            makeSignTask();
-        }
-    }
-
     private void makeBaublesTask()
     {
-        try
+        String baublesFile = "Baubles-deobf-" + baublesMinecraft + "-" + baublesVersion + ".jar";
+        final String baublesDest = "libs/" + baublesFile;
+        String baublesUrl = "https://dl.dropboxusercontent.com/u/47135879/" + baublesFile;
+
+        File[] files = delayedFile("libs").call().listFiles();
+        List<File> baubs = new ArrayList<File>();
+        boolean hasUpToDateBaubles = false;
+
+        if (files != null)
         {
-            String baublesMc = getCWVersion(project, "BAUBLES_MC");
-            String baubles = getCWVersion(project, "BAUBLES");
-            String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = getProperty(project, "src/main/java/" + dir + "/reference/Reference.java",
-                                             "BAUBLES_ROOT");
-            String baublesUrl = baublesRoot + baublesFile;
-            final String baublesDest = "libs/" + baublesFile;
-
-            File[] files = delayedFile("libs").call().listFiles();
-            List<File> baubs = new ArrayList<File>();
-            boolean hasUpToDateBaubles = false;
-
-            if (files != null)
+            for (File file : files)
             {
-                for (File file : files)
+                if (file.isFile())
                 {
-                    if (file.isFile())
+                    if (file.getName().contains("Baubles"))
                     {
-                        if (file.getName().contains("Baubles"))
+                        if (file.getName().equals(baublesFile))
                         {
-                            if (file.getName().equals(baublesFile))
-                            {
-                                hasUpToDateBaubles = true;
-                            }
-                            else
-                            {
-                                baubs.add(file);
-                            }
+                            hasUpToDateBaubles = true;
+                        }
+                        else
+                        {
+                            baubs.add(file);
                         }
                     }
                 }
             }
-
-            Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
-
-            for (File file : baubs)
-            {
-                cleanEveryBaubles.delete(file);
-            }
-
-            if (hasUpToDateBaubles)
-            {
-                cleanEveryBaubles.delete(delayedFile(baublesDest).call());
-            }
-
-            cleanEveryBaubles.setDescription(
-                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
-            cleanEveryBaubles.setGroup(Reference.NAME);
-
-            Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
-
-            for (File file : baubs)
-            {
-                cleanBaubles.delete(file);
-            }
-
-            cleanBaubles.setDescription(
-                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
-                            "(excluding the up-to-date one)");
-            cleanBaubles.setGroup(Reference.NAME);
-
-            DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
-            getBaubles.setUrl(delayedString(baublesUrl));
-            getBaubles.setOutput(delayedFile(baublesDest));
-            getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
-            {
-                @Override
-                public boolean isSatisfiedBy(Task task)
-                {
-                    DelayedFile excepted = delayedFile(baublesDest);
-                    return excepted.call().exists() && !excepted.call().isDirectory();
-                }
-            });
-            getBaubles.setDescription("Downloads the correct version of Baubles");
-            getBaubles.setGroup(Reference.NAME);
-            getBaubles.dependsOn(cleanBaubles);
-
-            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
         }
-        catch (IOException e)
+
+        Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
+
+        for (File file : baubs)
         {
-            project.getLogger().warn("Failed to get baubles properties");
-            e.printStackTrace();
+            cleanEveryBaubles.delete(file);
         }
+
+        if (hasUpToDateBaubles)
+        {
+            cleanEveryBaubles.delete(delayedFile(baublesDest).call());
+        }
+
+        cleanEveryBaubles.setDescription(
+                "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
+        cleanEveryBaubles.setGroup(Reference.NAME);
+
+        Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
+
+        for (File file : baubs)
+        {
+            cleanBaubles.delete(file);
+        }
+
+        cleanBaubles.setDescription(
+                "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
+                        "(excluding the up-to-date one)");
+        cleanBaubles.setGroup(Reference.NAME);
+
+        DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
+        getBaubles.setUrl(delayedString(baublesUrl));
+        getBaubles.setOutput(delayedFile(baublesDest));
+        getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                DelayedFile excepted = delayedFile(baublesDest);
+                return excepted.call().exists() && !excepted.call().isDirectory();
+            }
+        });
+        getBaubles.setDescription("Downloads the correct version of Baubles");
+        getBaubles.setGroup(Reference.NAME);
+        getBaubles.dependsOn(cleanBaubles);
+
+        project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
     }
 
     private void makePackageTasks()
@@ -523,8 +495,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         String s = builder.toString();
 
-        // TODO Description support
         data.put(s, versionNumber);
+
+        builder.append(separator);
+        builder.append("description");
+
+        s = builder.toString();
+
+        data.put(s, versionDescription);
 
         return data;
     }
@@ -810,8 +788,52 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public static String setVersionCheck(String id)
     {
+        return setVersionCheck(id, "null");
+    }
+
+    public static String versionCheck(Project p, String desc)
+    {
+        return setVersionCheck(p, desc);
+    }
+
+    public static String versionCheck(String id, String desc)
+    {
+        return setVersionCheck(id, desc);
+    }
+
+    public static String setVersionCheck(Project p, String desc)
+    {
+        return setVersionCheck(p.getName().toLowerCase(), desc);
+    }
+
+    public static String setVersionCheck(String id, String desc)
+    {
         versionCheckId = id;
         hasVersionCheck = true;
+        versionDescription = desc;
         return id;
+    }
+
+    public static String baubles(String s)
+    {
+        return setBaubles(s);
+    }
+
+    public static String baubles(String s, String mc)
+    {
+        return setBaubles(s, minecraftVersion);
+    }
+
+    public static String setBaubles(String s)
+    {
+        return setBaubles(s, minecraftVersion);
+    }
+
+    public static String setBaubles(String s, String mc)
+    {
+        baublesVersion = s;
+        baublesMinecraft = mc;
+        needsBaubles = true;
+        return s;
     }
 }

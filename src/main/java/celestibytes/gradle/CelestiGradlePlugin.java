@@ -95,9 +95,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getLogging().addStandardErrorListener(listener);
         project.getGradle().addBuildListener(listener);
 
-        applyPlugins();
         addRepositories();
         resolveProperties();
+        applyPlugins();
 
         if (!fg)
         {
@@ -174,6 +174,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             applyExternalPlugin("maven");
             applyExternalPlugin("eclipse");
             applyExternalPlugin("idea");
+
+            if (isMinecraftMod)
+            {
+                applyExternalPlugin("forge");
+                fg = true;
+            }
         }
     }
 

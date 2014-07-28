@@ -6,7 +6,5 @@ public final class Reference
     public static final String NAME_FULL = "Celestibytes Gradle Plugin";
     public static final String VERSION = Versions.VERSION;
 
-    public static final String EXTENSION = "celestibytes";
-
-    public static final String MAVEN = "http://celestibytes.github.io/maven/"; // TODO http://celestibytes.github.io/files/
+    public static final String MAVEN = "https://raw.githubusercontent.com/Celestibytes/files/master/";
 }

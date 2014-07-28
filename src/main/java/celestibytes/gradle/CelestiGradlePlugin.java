@@ -29,7 +29,6 @@ import org.gradle.api.ProjectConfigurationException;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.bundling.Jar;
@@ -44,21 +43,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * TODO Version check json handling
- */
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
-    private static final String CHANNELS = "channels";
-    private static final String STABLE = "stable";
-    private static final String LATEST = "latest";
-    private static final String MAJOR = "major";
-    private static final String MINOR = "minor";
-    private static final String PATCH = "patch";
-    private static final String POSTFIX = "postfix";
-    private static final String NUMBER = "number";
-    private static final String DESCRIPTION = "description";
-
     private static Project projectStatic;
     private static boolean fg;
 
@@ -80,11 +66,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static String coreArtifact = "";
     private static String coreDevArtifact = "";
 
-    private Project project;
-    private String projectName;
-    private String jsonName;
+    private static String versionCheckId;
+    private static boolean hasVersionCheck = false;
+    private static String versionDescription;
 
-    private Version version;
+    private static String baublesVersion;
+    private static String baublesMinecraft;
+    private static boolean needsBaubles = false;
+
+    private Project project;
 
     private String filesmaven;
 
@@ -99,17 +89,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         projectStatic = project;
         fg = project.getPlugins().hasPlugin("forge");
-        projectName = project.getName();
-        jsonName = projectName.toLowerCase();
 
         FileLogListenner listener = new FileLogListenner(project.file(Constants.LOG));
         project.getLogging().addStandardOutputListener(listener);
         project.getLogging().addStandardErrorListener(listener);
         project.getGradle().addBuildListener(listener);
 
-        applyPlugins();
         addRepositories();
         resolveProperties();
+        applyPlugins();
 
         if (!fg)
         {
@@ -117,7 +105,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
 
         addDependencies();
-        makeProjectTasks();
+
+        if (needsBaubles)
+        {
+            makeBaublesTask();
+        }
+
+        makePackageTasks();
+        makeSignTask();
         makeLifecycleTasks();
     }
 
@@ -127,8 +122,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             throw new ProjectConfigurationException("You must set the version number!", new NullPointerException());
         }
-
-        version = Version.parse(versionNumber);
 
         if (fg && !isMinecraftMod)
         {
@@ -170,7 +163,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         hasKeystore = project.hasProperty("keystoreLocation");
 
-        isStable = version.isStable();
+        isStable = Version.parse(versionNumber).isStable();
     }
 
     private void applyPlugins()
@@ -181,6 +174,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             applyExternalPlugin("maven");
             applyExternalPlugin("eclipse");
             applyExternalPlugin("idea");
+
+            if (isMinecraftMod)
+            {
+                applyExternalPlugin("forge");
+                fg = true;
+            }
         }
     }
 
@@ -204,131 +203,82 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
 
-    private void makeProjectTasks()
-    {
-        if (projectName.toLowerCase().equals(Projects.CORE.toLowerCase()))
-        {
-            makePackageTasks();
-            makeSignTask();
-        }
-
-        if (projectName.toLowerCase().equals(Projects.CW.toLowerCase()))
-        {
-            makeBaublesTask();
-
-            // TODO Remove
-            manifest = new Closure<Object>(project)
-            {
-                @Override
-                public Object call()
-                {
-                    Manifest manifest = (Manifest) getDelegate();
-                    manifest.getAttributes().put("FMLCorePlugin", delayedString(
-                            "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader").call());
-                    manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
-                    return null;
-                }
-            };
-
-            makePackageTasks();
-            makeSignTask();
-        }
-
-        if (projectName.toLowerCase().equals(Projects.DGC.toLowerCase()))
-        {
-            makePackageTasks();
-            makeSignTask();
-        }
-    }
-
     private void makeBaublesTask()
     {
-        try
+        String baublesFile = "Baubles-deobf-" + baublesMinecraft + "-" + baublesVersion + ".jar";
+        final String baublesDest = "libs/" + baublesFile;
+        String baublesUrl = "https://dl.dropboxusercontent.com/u/47135879/" + baublesFile;
+
+        File[] files = delayedFile("libs").call().listFiles();
+        List<File> baubs = new ArrayList<File>();
+        boolean hasUpToDateBaubles = false;
+
+        if (files != null)
         {
-            String baublesMc = getCWVersion(project, "BAUBLES_MC");
-            String baubles = getCWVersion(project, "BAUBLES");
-            String baublesFile = "Baubles-deobf-" + baublesMc + "-" + baubles + ".jar";
-            String baublesRoot = getProperty(project, "src/main/java/" + dir + "/reference/Reference.java",
-                                             "BAUBLES_ROOT");
-            String baublesUrl = baublesRoot + baublesFile;
-            final String baublesDest = "libs/" + baublesFile;
-
-            File[] files = delayedFile("libs").call().listFiles();
-            List<File> baubs = new ArrayList<File>();
-            boolean hasUpToDateBaubles = false;
-
-            if (files != null)
+            for (File file : files)
             {
-                for (File file : files)
+                if (file.isFile())
                 {
-                    if (file.isFile())
+                    if (file.getName().contains("Baubles"))
                     {
-                        if (file.getName().contains("Baubles"))
+                        if (file.getName().equals(baublesFile))
                         {
-                            if (file.getName().equals(baublesFile))
-                            {
-                                hasUpToDateBaubles = true;
-                            }
-                            else
-                            {
-                                baubs.add(file);
-                            }
+                            hasUpToDateBaubles = true;
+                        }
+                        else
+                        {
+                            baubs.add(file);
                         }
                     }
                 }
             }
-
-            Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
-
-            for (File file : baubs)
-            {
-                cleanEveryBaubles.delete(file);
-            }
-
-            if (hasUpToDateBaubles)
-            {
-                cleanEveryBaubles.delete(delayedFile(baublesDest).call());
-            }
-
-            cleanEveryBaubles.setDescription(
-                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
-            cleanEveryBaubles.setGroup(Reference.NAME);
-
-            Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
-
-            for (File file : baubs)
-            {
-                cleanBaubles.delete(file);
-            }
-
-            cleanBaubles.setDescription(
-                    "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
-                            "(excluding the up-to-date one)");
-            cleanBaubles.setGroup(Reference.NAME);
-
-            DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
-            getBaubles.setUrl(delayedString(baublesUrl));
-            getBaubles.setOutput(delayedFile(baublesDest));
-            getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
-            {
-                @Override
-                public boolean isSatisfiedBy(Task task)
-                {
-                    DelayedFile excepted = delayedFile(baublesDest);
-                    return excepted.call().exists() && !excepted.call().isDirectory();
-                }
-            });
-            getBaubles.setDescription("Downloads the correct version of Baubles");
-            getBaubles.setGroup(Reference.NAME);
-            getBaubles.dependsOn(cleanBaubles);
-
-            project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
         }
-        catch (IOException e)
+
+        Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
+
+        for (File file : baubs)
         {
-            project.getLogger().warn("Failed to get baubles properties");
-            e.printStackTrace();
+            cleanEveryBaubles.delete(file);
         }
+
+        if (hasUpToDateBaubles)
+        {
+            cleanEveryBaubles.delete(delayedFile(baublesDest).call());
+        }
+
+        cleanEveryBaubles.setDescription(
+                "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
+        cleanEveryBaubles.setGroup(Reference.NAME);
+
+        Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
+
+        for (File file : baubs)
+        {
+            cleanBaubles.delete(file);
+        }
+
+        cleanBaubles.setDescription(
+                "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
+                        "(excluding the up-to-date one)");
+        cleanBaubles.setGroup(Reference.NAME);
+
+        DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
+        getBaubles.setUrl(delayedString(baublesUrl));
+        getBaubles.setOutput(delayedFile(baublesDest));
+        getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                DelayedFile excepted = delayedFile(baublesDest);
+                return excepted.call().exists() && !excepted.call().isDirectory();
+            }
+        });
+        getBaubles.setDescription("Downloads the correct version of Baubles");
+        getBaubles.setGroup(Reference.NAME);
+        getBaubles.dependsOn(cleanBaubles);
+
+        project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
     }
 
     private void makePackageTasks()
@@ -472,7 +422,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             @Override
             public boolean isSatisfiedBy(Task task)
             {
-                return true; // hasVersionCheck;
+                return hasVersionCheck;
             }
         });
         processJson.doLast(new Action<Task>()
@@ -494,8 +444,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
                     inputStream.close();
 
-                    // Map<String, Object> data = new Gson().fromJson(json, Map.class);
-                    // processMaps(data);
+                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
+
+                    Map<String, String> args = newHashMap();
+                    args.put("file", filesmaven + "/data.json");
+                    invokeAnt("delete", args);
+
+                    writeJsonToFile(project.file(filesmaven + "/data.json"), processMaps(data));
                 }
                 catch (IOException e)
                 {
@@ -511,203 +466,78 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         release.dependsOn(processJson);
     }
 
-    @SuppressWarnings("unchecked")
-    private void processMaps(Map<String, Object> data) throws IOException
+    private Map<String, Object> processMaps(Map<String, Object> data) throws IOException
     {
-        if (!data.containsKey(jsonName) || (data.containsKey(jsonName) && !(data.get(jsonName) instanceof Map)))
+        String separator;
+        String summary;
+
+        if (data.containsKey("separator") && data.get("separator") instanceof String)
         {
-            data.remove(jsonName);
-
-            Map<String, Object> modNode = newMap();
-            Map<String, Object> minecraftNode = newMap();
-            Map<String, Object> channelsNode = newMap();
-
-            minecraftNode.put(CHANNELS, initChannels(channelsNode));
-
-            modNode.put(minecraftVersion, minecraftNode);
-
-            data.put(jsonName, modNode);
+            separator = (String) data.get("separator");
         }
         else
         {
-            Map<String, Object> modNode = (Map<String, Object>) data.get(jsonName);
-
-            if (!modNode.containsKey(minecraftVersion) || (modNode.containsKey(minecraftVersion) && !(modNode
-                    .get(minecraftVersion) instanceof Map)))
-            {
-                modNode.remove(minecraftVersion);
-
-                Map<String, Object> minecraftNode = newMap();
-                Map<String, Object> channelsNode = newMap();
-
-                minecraftNode.put(CHANNELS, initChannels(channelsNode));
-
-                modNode.put(minecraftVersion, minecraftNode);
-
-                data.put(jsonName, modNode);
-            }
-            else
-            {
-                Map<String, Object> minecraftNode = (Map<String, Object>) modNode.get(minecraftVersion);
-
-                if (!minecraftNode.containsKey(CHANNELS) || (minecraftNode.containsKey(CHANNELS) && !(minecraftNode
-                        .get(CHANNELS) instanceof Map)))
-                {
-                    minecraftNode.remove(CHANNELS);
-
-                    Map<String, Object> channelsNode = newMap();
-
-                    minecraftNode.put(CHANNELS, initChannels(channelsNode));
-
-                    modNode.put(minecraftVersion, minecraftNode);
-
-                    data.put(jsonName, modNode);
-                }
-                else
-                {
-                    Map<String, Object> channelsNode = (Map<String, Object>) minecraftNode.get(CHANNELS);
-
-                    if (!channelsNode.containsKey(STABLE) || (channelsNode.containsKey(STABLE) && !(channelsNode
-                            .get(STABLE) instanceof Map)))
-                    {
-                        channelsNode.remove(STABLE);
-
-                        channelsNode.put(STABLE, initStable());
-
-                        minecraftNode.put(CHANNELS, channelsNode);
-
-                        modNode.put(minecraftVersion, minecraftNode);
-
-                        data.put(jsonName, modNode);
-                    }
-                    else
-                    {
-                        if (isStable)
-                        {
-                            Map<String, Object> stable = (Map<String, Object>) channelsNode.get(STABLE);
-
-                            channelsNode.put(STABLE, processStable(stable));
-
-                            minecraftNode.put(CHANNELS, channelsNode);
-
-                            modNode.put(minecraftVersion, minecraftNode);
-
-                            data.put(jsonName, modNode);
-                        }
-                    }
-
-                    if (!channelsNode.containsKey(LATEST) || (channelsNode.containsKey(LATEST) && !(channelsNode
-                            .get(LATEST) instanceof Map)))
-                    {
-                        channelsNode.remove(LATEST);
-
-                        channelsNode.put(LATEST, initLatest());
-
-                        minecraftNode.put(CHANNELS, channelsNode);
-
-                        modNode.put(minecraftVersion, minecraftNode);
-
-                        data.put(jsonName, modNode);
-                    }
-                    else
-                    {
-                        if (!isStable)
-                        {
-                            Map<String, Object> latest = (Map<String, Object>) channelsNode.get(LATEST);
-
-                            channelsNode.put(LATEST, processLatest(latest));
-
-                            minecraftNode.put(CHANNELS, channelsNode);
-
-                            modNode.put(minecraftVersion, minecraftNode);
-
-                            data.put(jsonName, modNode);
-                        }
-                    }
-                }
-            }
+            throw new NullPointerException("No separator specified in version check json");
         }
 
-        Map<String, String> args = Maps.newHashMap();
-        args.put("file", filesmaven + "/data.json");
-        invokeAnt("delete", args);
+        if (data.containsKey("summary") && data.get("summary") instanceof String)
+        {
+            summary = (String) data.get("summary");
+        }
+        else
+        {
+            throw new NullPointerException("No summary specified in version check json");
+        }
 
-        File json = project.file(filesmaven + "/data.json");
+        StringBuilder builder = new StringBuilder();
 
-        FileUtils.writeStringToFile(json, new Gson().toJson(data));
-    }
+        builder.append(versionCheckId);
+        builder.append(separator);
 
-    private Map<String, Object> initChannels(Map<String, Object> channelsNode)
-    {
-        channelsNode.put(STABLE, initStable());
-        channelsNode.put(LATEST, initLatest());
+        if (isMinecraftMod)
+        {
+            builder.append(minecraftVersion);
+            builder.append(separator);
+        }
 
-        return channelsNode;
-    }
-
-    private Map<String, Object> initStable()
-    {
-        Map<String, Object> stable = newMap();
-
-        return processStable(stable);
-    }
-
-    private Map<String, Object> processStable(Map<String, Object> stable)
-    {
-        // TODO Description
         if (isStable)
         {
-            stable.put(MAJOR, version.major);
-            stable.put(MINOR, version.minor);
-            stable.put(PATCH, version.patch);
-            stable.put(DESCRIPTION, "");
+            builder.append("stable");
         }
         else
         {
-            stable.put(MAJOR, 0);
-            stable.put(MINOR, 0);
-            stable.put(PATCH, 0);
-            stable.put(DESCRIPTION, "");
+            builder.append("latest");
         }
 
-        return stable;
+        String s = builder.toString();
+
+        data.put(s, versionNumber);
+
+        builder.append(separator);
+        builder.append(summary);
+
+        s = builder.toString();
+
+        data.put(s, versionDescription);
+
+        return data;
     }
 
-    private Map<String, Object> initLatest()
-    {
-        Map<String, Object> latest = newMap();
-
-        return processLatest(latest);
-    }
-
-    private Map<String, Object> processLatest(Map<String, Object> latest)
-    {
-        // TODO Description
-        if (isStable)
-        {
-            latest.put(MAJOR, 0);
-            latest.put(MINOR, 0);
-            latest.put(PATCH, 0);
-            latest.put(POSTFIX, null);
-            latest.put(NUMBER, 0);
-            latest.put(DESCRIPTION, "");
-        }
-        else
-        {
-            latest.put(MAJOR, version.major);
-            latest.put(MINOR, version.minor);
-            latest.put(PATCH, version.patch);
-            latest.put(POSTFIX, version.getChannel().getKey());
-            latest.put(NUMBER, version.number);
-            latest.put(DESCRIPTION, "");
-        }
-
-        return latest;
-    }
-
-    private <K, V> Map<K, V> newMap()
+    @SuppressWarnings("unused")
+    private static <K, V> Map<K, V> newMap()
     {
         return new HashMap<K, V>();
+    }
+
+    private static <K, V> Map<K, V> newHashMap()
+    {
+        return Maps.newHashMap();
+    }
+
+    private static File writeJsonToFile(File file, Map<String, Object> data) throws IOException
+    {
+        FileUtils.writeStringToFile(file, new Gson().toJson(data));
+        return file;
     }
 
     public static void displayBanner()
@@ -720,6 +550,17 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (fg)
         {
             projectStatic.getLogger().lifecycle(" ForgeGradle enabled        ");
+            projectStatic.getLogger().lifecycle(" Minecraft version " + minecraftVersion);
+
+            if (needsCore)
+            {
+                projectStatic.getLogger().lifecycle(" Celestibytes Core version " + coreVersion);
+            }
+
+            if (needsBaubles)
+            {
+                projectStatic.getLogger().lifecycle(" Baubles version " + baublesVersion);
+            }
         }
         else
         {
@@ -748,6 +589,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public void invokeAnt(String task, Map<String, String> args)
     {
+        invokeAnt(project, task, args);
+    }
+
+    public static void invokeAnt(Project project, String task, Map<String, String> args)
+    {
         project.getAnt().invokeMethod(task, args);
     }
 
@@ -758,7 +604,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.apply(map);
     }
 
-    public MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
+    public static MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
     {
         return project.getRepositories().maven(new Action<MavenArtifactRepository>()
         {
@@ -771,7 +617,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         });
     }
 
-    public FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
+    public static FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
     {
         return project.getRepositories().flatDir(new Action<FlatDirectoryArtifactRepository>()
         {
@@ -950,5 +796,71 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         hasManifest = true;
         manifest = c;
         return c;
+    }
+
+    public static String versionCheck(Project p)
+    {
+        return setVersionCheck(p);
+    }
+
+    public static String versionCheck(String id)
+    {
+        return setVersionCheck(id);
+    }
+
+    public static String setVersionCheck(Project p)
+    {
+        return setVersionCheck(p.getName().toLowerCase());
+    }
+
+    public static String setVersionCheck(String id)
+    {
+        return setVersionCheck(id, "null");
+    }
+
+    public static String versionCheck(Project p, String desc)
+    {
+        return setVersionCheck(p, desc);
+    }
+
+    public static String versionCheck(String id, String desc)
+    {
+        return setVersionCheck(id, desc);
+    }
+
+    public static String setVersionCheck(Project p, String desc)
+    {
+        return setVersionCheck(p.getName().toLowerCase(), desc);
+    }
+
+    public static String setVersionCheck(String id, String desc)
+    {
+        versionCheckId = id;
+        hasVersionCheck = true;
+        versionDescription = desc;
+        return id;
+    }
+
+    public static String baubles(String s)
+    {
+        return setBaubles(s);
+    }
+
+    public static String baubles(String s, String mc)
+    {
+        return setBaubles(s, mc);
+    }
+
+    public static String setBaubles(String s)
+    {
+        return setBaubles(s, minecraftVersion);
+    }
+
+    public static String setBaubles(String s, String mc)
+    {
+        baublesVersion = s;
+        baublesMinecraft = mc;
+        needsBaubles = true;
+        return s;
     }
 }

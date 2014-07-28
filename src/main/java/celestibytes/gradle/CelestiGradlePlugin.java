@@ -499,13 +499,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
                     Map<String, Object> data = new Gson().fromJson(json, Map.class);
 
-                    Map<String, String> args = Maps.newHashMap();
+                    Map<String, String> args = newHashMap();
                     args.put("file", filesmaven + "/data.json");
                     invokeAnt("delete", args);
 
-                    File file = project.file(filesmaven + "/data.json");
-
-                    FileUtils.writeStringToFile(file, new Gson().toJson(processMaps(data)));
+                    writeJsonToFile(project.file(filesmaven + "/data.json"), processMaps(data));
                 }
                 catch (IOException e)
                 {
@@ -562,214 +560,21 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return data;
     }
 
-    @SuppressWarnings("unchecked")
-    @Deprecated
-    private void processMapsOld(Map<String, Object> data) throws IOException
-    {
-        if (!data.containsKey(jsonName) || (data.containsKey(jsonName) && !(data.get(jsonName) instanceof Map)))
-        {
-            data.remove(jsonName);
-
-            Map<String, Object> modNode = newMap();
-            Map<String, Object> minecraftNode = newMap();
-            Map<String, Object> channelsNode = newMap();
-
-            minecraftNode.put(CHANNELS, initChannels(channelsNode));
-
-            modNode.put(minecraftVersion, minecraftNode);
-
-            data.put(jsonName, modNode);
-        }
-        else
-        {
-            Map<String, Object> modNode = (Map<String, Object>) data.get(jsonName);
-
-            if (!modNode.containsKey(minecraftVersion) || (modNode.containsKey(minecraftVersion) && !(modNode
-                    .get(minecraftVersion) instanceof Map)))
-            {
-                modNode.remove(minecraftVersion);
-
-                Map<String, Object> minecraftNode = newMap();
-                Map<String, Object> channelsNode = newMap();
-
-                minecraftNode.put(CHANNELS, initChannels(channelsNode));
-
-                modNode.put(minecraftVersion, minecraftNode);
-
-                data.put(jsonName, modNode);
-            }
-            else
-            {
-                Map<String, Object> minecraftNode = (Map<String, Object>) modNode.get(minecraftVersion);
-
-                if (!minecraftNode.containsKey(CHANNELS) || (minecraftNode.containsKey(CHANNELS) && !(minecraftNode
-                        .get(CHANNELS) instanceof Map)))
-                {
-                    minecraftNode.remove(CHANNELS);
-
-                    Map<String, Object> channelsNode = newMap();
-
-                    minecraftNode.put(CHANNELS, initChannels(channelsNode));
-
-                    modNode.put(minecraftVersion, minecraftNode);
-
-                    data.put(jsonName, modNode);
-                }
-                else
-                {
-                    Map<String, Object> channelsNode = (Map<String, Object>) minecraftNode.get(CHANNELS);
-
-                    if (!channelsNode.containsKey(STABLE) || (channelsNode.containsKey(STABLE) && !(channelsNode
-                            .get(STABLE) instanceof Map)))
-                    {
-                        channelsNode.remove(STABLE);
-
-                        channelsNode.put(STABLE, initStable());
-
-                        minecraftNode.put(CHANNELS, channelsNode);
-
-                        modNode.put(minecraftVersion, minecraftNode);
-
-                        data.put(jsonName, modNode);
-                    }
-                    else
-                    {
-                        if (isStable)
-                        {
-                            Map<String, Object> stable = (Map<String, Object>) channelsNode.get(STABLE);
-
-                            channelsNode.put(STABLE, processStable(stable));
-
-                            minecraftNode.put(CHANNELS, channelsNode);
-
-                            modNode.put(minecraftVersion, minecraftNode);
-
-                            data.put(jsonName, modNode);
-                        }
-                    }
-
-                    if (!channelsNode.containsKey(LATEST) || (channelsNode.containsKey(LATEST) && !(channelsNode
-                            .get(LATEST) instanceof Map)))
-                    {
-                        channelsNode.remove(LATEST);
-
-                        channelsNode.put(LATEST, initLatest());
-
-                        minecraftNode.put(CHANNELS, channelsNode);
-
-                        modNode.put(minecraftVersion, minecraftNode);
-
-                        data.put(jsonName, modNode);
-                    }
-                    else
-                    {
-                        if (!isStable)
-                        {
-                            Map<String, Object> latest = (Map<String, Object>) channelsNode.get(LATEST);
-
-                            channelsNode.put(LATEST, processLatest(latest));
-
-                            minecraftNode.put(CHANNELS, channelsNode);
-
-                            modNode.put(minecraftVersion, minecraftNode);
-
-                            data.put(jsonName, modNode);
-                        }
-                    }
-                }
-            }
-        }
-
-        Map<String, String> args = Maps.newHashMap();
-        args.put("file", filesmaven + "/data.json");
-        invokeAnt("delete", args);
-
-        File json = project.file(filesmaven + "/data.json");
-
-        FileUtils.writeStringToFile(json, new Gson().toJson(data));
-    }
-
-    @Deprecated
-    private Map<String, Object> initChannels(Map<String, Object> channelsNode)
-    {
-        channelsNode.put(STABLE, initStable());
-        channelsNode.put(LATEST, initLatest());
-
-        return channelsNode;
-    }
-
-    @Deprecated
-    private Map<String, Object> initStable()
-    {
-        Map<String, Object> stable = newMap();
-
-        return processStable(stable);
-    }
-
-    @Deprecated
-    private Map<String, Object> processStable(Map<String, Object> stable)
-    {
-        // TODO Description
-        if (isStable)
-        {
-            stable.put(MAJOR, version.major);
-            stable.put(MINOR, version.minor);
-            stable.put(PATCH, version.patch);
-            stable.put(DESCRIPTION, "");
-        }
-        else
-        {
-            stable.put(MAJOR, 0);
-            stable.put(MINOR, 0);
-            stable.put(PATCH, 0);
-            stable.put(DESCRIPTION, "");
-        }
-
-        return stable;
-    }
-
-    @Deprecated
-    private Map<String, Object> initLatest()
-    {
-        Map<String, Object> latest = newMap();
-
-        return processLatest(latest);
-    }
-
-    @Deprecated
-    private Map<String, Object> processLatest(Map<String, Object> latest)
-    {
-        // TODO Description
-        if (isStable)
-        {
-            latest.put(MAJOR, 0);
-            latest.put(MINOR, 0);
-            latest.put(PATCH, 0);
-            latest.put(POSTFIX, null);
-            latest.put(NUMBER, 0);
-            latest.put(DESCRIPTION, "");
-        }
-        else
-        {
-            latest.put(MAJOR, version.major);
-            latest.put(MINOR, version.minor);
-            latest.put(PATCH, version.patch);
-            latest.put(POSTFIX, version.getChannel().getKey());
-            latest.put(NUMBER, version.number);
-            latest.put(DESCRIPTION, "");
-        }
-
-        return latest;
-    }
-
-    private <K, V> Map<K, V> newMap()
+    @SuppressWarnings("unused")
+    private static <K, V> Map<K, V> newMap()
     {
         return new HashMap<K, V>();
     }
 
-    private <K, V> Map<K, V> newHashMap()
+    private static <K, V> Map<K, V> newHashMap()
     {
         return Maps.newHashMap();
+    }
+
+    private static File writeJsonToFile(File file, Map<String, Object> data) throws IOException
+    {
+        FileUtils.writeStringToFile(file, new Gson().toJson(data));
+        return file;
     }
 
     public static void displayBanner()
@@ -810,6 +615,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public void invokeAnt(String task, Map<String, String> args)
     {
+        invokeAnt(project, task, args);
+    }
+
+    public static void invokeAnt(Project project, String task, Map<String, String> args)
+    {
         project.getAnt().invokeMethod(task, args);
     }
 
@@ -820,7 +630,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.apply(map);
     }
 
-    public MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
+    public static MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
     {
         return project.getRepositories().maven(new Action<MavenArtifactRepository>()
         {
@@ -833,7 +643,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         });
     }
 
-    public FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
+    public static FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
     {
         return project.getRepositories().flatDir(new Action<FlatDirectoryArtifactRepository>()
         {

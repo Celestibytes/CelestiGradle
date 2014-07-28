@@ -544,6 +544,17 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (fg)
         {
             projectStatic.getLogger().lifecycle(" ForgeGradle enabled        ");
+            projectStatic.getLogger().lifecycle(" Minecraft version " + minecraftVersion);
+
+            if (needsCore)
+            {
+                projectStatic.getLogger().lifecycle(" Celestibytes Core version " + coreVersion);
+            }
+
+            if (needsBaubles)
+            {
+                projectStatic.getLogger().lifecycle(" Baubles version " + baublesVersion);
+            }
         }
         else
         {

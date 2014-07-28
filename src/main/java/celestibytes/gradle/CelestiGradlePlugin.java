@@ -463,6 +463,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private Map<String, Object> processMaps(Map<String, Object> data) throws IOException
     {
         String separator;
+        String summary;
 
         if (data.containsKey("separator") && data.get("separator") instanceof String)
         {
@@ -471,6 +472,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         else
         {
             throw new NullPointerException("No separator specified in version check json");
+        }
+
+        if (data.containsKey("summary") && data.get("summary") instanceof String)
+        {
+            summary = (String) data.get("summary");
+        }
+        else
+        {
+            throw new NullPointerException("No summary specified in version check json");
         }
 
         StringBuilder builder = new StringBuilder();
@@ -498,7 +508,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         data.put(s, versionNumber);
 
         builder.append(separator);
-        builder.append("description");
+        builder.append(summary);
 
         s = builder.toString();
 
@@ -821,7 +831,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public static String baubles(String s, String mc)
     {
-        return setBaubles(s, minecraftVersion);
+        return setBaubles(s, mc);
     }
 
     public static String setBaubles(String s)

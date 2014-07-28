@@ -29,7 +29,6 @@ import org.gradle.api.ProjectConfigurationException;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.java.archives.Manifest;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.bundling.Jar;
@@ -201,22 +200,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         if (projectName.toLowerCase().equals(Projects.CW.toLowerCase()))
         {
+            // TODO Make this un-hardcoded
             makeBaublesTask();
-
-            // TODO Remove
-            manifest = new Closure<Object>(project)
-            {
-                @Override
-                public Object call()
-                {
-                    Manifest manifest = (Manifest) getDelegate();
-                    manifest.getAttributes().put("FMLCorePlugin", delayedString(
-                            "celestibytes.celestialwizardry.codechicken.core.launch.DepLoader").call());
-                    manifest.getAttributes().put("FMLCorePluginContainsFMLMod", delayedString("true").call());
-                    return null;
-                }
-            };
-
             makePackageTasks();
             makeSignTask();
         }

@@ -80,6 +80,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static String coreArtifact = "";
     private static String coreDevArtifact = "";
 
+    private static String versionCheckId;
+    private static boolean hasVersionCheck = false;
+
     private Project project;
     private String projectName;
     private String jsonName;
@@ -472,7 +475,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             @Override
             public boolean isSatisfiedBy(Task task)
             {
-                return true; // hasVersionCheck;
+                return hasVersionCheck;
             }
         });
         processJson.doLast(new Action<Task>()
@@ -494,8 +497,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
                     inputStream.close();
 
-                    // Map<String, Object> data = new Gson().fromJson(json, Map.class);
-                    // processMaps(data);
+                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
+
+                    Map<String, String> args = Maps.newHashMap();
+                    args.put("file", filesmaven + "/data.json");
+                    invokeAnt("delete", args);
+
+                    File file = project.file(filesmaven + "/data.json");
+
+                    FileUtils.writeStringToFile(file, new Gson().toJson(processMaps(data)));
                 }
                 catch (IOException e)
                 {
@@ -511,8 +521,50 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         release.dependsOn(processJson);
     }
 
+    private Map<String, Object> processMaps(Map<String, Object> data) throws IOException
+    {
+        String separator;
+
+        if (data.containsKey("separator") && data.get("separator") instanceof String)
+        {
+            separator = (String) data.get("separator");
+        }
+        else
+        {
+            throw new NullPointerException("No separator specified in version check json");
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.append(versionCheckId);
+        builder.append(separator);
+
+        if (isMinecraftMod)
+        {
+            builder.append(minecraftVersion);
+            builder.append(separator);
+        }
+
+        if (isStable)
+        {
+            builder.append("stable");
+        }
+        else
+        {
+            builder.append("latest");
+        }
+
+        String s = builder.toString();
+
+        // TODO Description support
+        data.put(s, versionNumber);
+
+        return data;
+    }
+
     @SuppressWarnings("unchecked")
-    private void processMaps(Map<String, Object> data) throws IOException
+    @Deprecated
+    private void processMapsOld(Map<String, Object> data) throws IOException
     {
         if (!data.containsKey(jsonName) || (data.containsKey(jsonName) && !(data.get(jsonName) instanceof Map)))
         {
@@ -637,6 +689,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         FileUtils.writeStringToFile(json, new Gson().toJson(data));
     }
 
+    @Deprecated
     private Map<String, Object> initChannels(Map<String, Object> channelsNode)
     {
         channelsNode.put(STABLE, initStable());
@@ -645,6 +698,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return channelsNode;
     }
 
+    @Deprecated
     private Map<String, Object> initStable()
     {
         Map<String, Object> stable = newMap();
@@ -652,6 +706,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return processStable(stable);
     }
 
+    @Deprecated
     private Map<String, Object> processStable(Map<String, Object> stable)
     {
         // TODO Description
@@ -673,6 +728,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return stable;
     }
 
+    @Deprecated
     private Map<String, Object> initLatest()
     {
         Map<String, Object> latest = newMap();
@@ -680,6 +736,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return processLatest(latest);
     }
 
+    @Deprecated
     private Map<String, Object> processLatest(Map<String, Object> latest)
     {
         // TODO Description
@@ -708,6 +765,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private <K, V> Map<K, V> newMap()
     {
         return new HashMap<K, V>();
+    }
+
+    private <K, V> Map<K, V> newHashMap()
+    {
+        return Maps.newHashMap();
     }
 
     public static void displayBanner()
@@ -950,5 +1012,27 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         hasManifest = true;
         manifest = c;
         return c;
+    }
+
+    public static String versionCheck(Project p)
+    {
+        return setVersionCheck(p);
+    }
+
+    public static String versionCheck(String id)
+    {
+        return setVersionCheck(id);
+    }
+
+    public static String setVersionCheck(Project p)
+    {
+        return setVersionCheck(p.getName().toLowerCase());
+    }
+
+    public static String setVersionCheck(String id)
+    {
+        versionCheckId = id;
+        hasVersionCheck = true;
+        return id;
     }
 }

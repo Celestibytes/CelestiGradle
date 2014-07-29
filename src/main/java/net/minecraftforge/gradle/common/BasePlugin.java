@@ -1,7 +1,6 @@
 package net.minecraftforge.gradle.common;
 
 import celestibytes.gradle.CelestiGradlePlugin;
-import celestibytes.gradle.reference.Versions;
 import groovy.lang.Closure;
 
 import java.io.File;
@@ -19,7 +18,6 @@ import net.minecraftforge.gradle.tasks.DownloadAssetsTask;
 import net.minecraftforge.gradle.tasks.ObtainFernFlowerTask;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 
-import celestibytes.gradle.reference.Reference;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
@@ -139,7 +137,8 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
 
     protected abstract DelayedFile getDevJson();
 
-    private static boolean displayBanner = true;
+    // CG PATCH: CHANGED FROM PRIVATE TO PUBLIC ////////////////////////////////////////////////////////////
+    public static boolean displayBanner = true;
 
     public void afterEvaluate()
     {

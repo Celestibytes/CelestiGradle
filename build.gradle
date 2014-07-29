@@ -12,7 +12,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.celestibytes'
-version = "2.0.1"
+version = "2.0.2"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
@@ -33,7 +33,7 @@ repositories {
     }
     maven {
         name = "cbs"
-        url = "https://raw.githubusercontent.com/PizzAna/maven/master/"
+        url = "https://raw.githubusercontent.com/Celestibytes/files/master/"
     }
     maven {
         name = "mojang"
@@ -86,6 +86,9 @@ dependencies {
     compile 'de.oceanlabs.mcp:RetroGuard:3.6.6'
     compile 'de.oceanlabs.mcp:mcinjector:3.2-SNAPSHOT'
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
+	
+	// PizzAnaLib
+	compile 'io.github.celestibytes:PizzAnaLib:1.0.0'
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"
@@ -97,9 +100,9 @@ dependencies {
 artifacts {archives jar}
 
 //These should add a compile time only dependancies to eclipse, ide, and javac, but NOT to the generated POM on maven.
-sourceSets.main.compileClasspath += configurations.compileOnly
-idea.module.scopes.PROVIDED.plus += configurations.compileOnly
-eclipse.classpath.plusConfigurations += configurations.compileOnly
+//sourceSets.main.compileClasspath += configurations.compileOnly
+//idea.module.scopes.PROVIDED.plus += configurations.compileOnly
+//eclipse.classpath.plusConfigurations += configurations.compileOnly
 
 uploadArchives {
     repositories {

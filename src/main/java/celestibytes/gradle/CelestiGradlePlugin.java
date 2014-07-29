@@ -3,6 +3,7 @@ package celestibytes.gradle;
 import net.minecraftforge.gradle.CopyInto;
 import net.minecraftforge.gradle.FileLogListenner;
 import net.minecraftforge.gradle.common.BaseExtension;
+import net.minecraftforge.gradle.common.BasePlugin;
 import net.minecraftforge.gradle.common.Constants;
 import net.minecraftforge.gradle.delayed.DelayedBase;
 import net.minecraftforge.gradle.delayed.DelayedFile;
@@ -179,6 +180,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             {
                 applyExternalPlugin("forge");
                 fg = true;
+            }
+            else
+            {
+                applyExternalPlugin("dummy");
+                BasePlugin.displayBanner = false;
             }
         }
     }

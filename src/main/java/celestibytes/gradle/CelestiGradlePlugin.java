@@ -291,20 +291,40 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
 
+        final boolean isJenkins = System.getenv("JOB_NAME") != null && project.hasProperty("jenkins_server") && project
+                .hasProperty("jenkins_password") && project.hasProperty("jenkins_user");
+
         ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
 
-        changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
-        changelog.setJobName(delayedString("{JENKINS_JOB}"));
-        changelog.setAuthName(delayedString("{JENKINS_AUTH_NAME}"));
-        changelog.setAuthPassword(delayedString("{JENKINS_AUTH_PASSWORD}"));
-        changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
-        changelog.setOutput(delayedFile(changelogFile));
+        if (isJenkins)
+        {
+            changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
+            changelog.setJobName(delayedString("{JENKINS_JOB}"));
+            changelog.setAuthName(delayedString("{JENKINS_AUTH_NAME}"));
+            changelog.setAuthPassword(delayedString("{JENKINS_AUTH_PASSWORD}"));
+            changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
+            changelog.setOutput(delayedFile(changelogFile));
+        }
+
+        changelog.onlyIf(new Spec<Task>()
+        {
+            @Override
+            public boolean isSatisfiedBy(Task task)
+            {
+                return isJenkins;
+            }
+        });
+
         changelog.dependsOn("classes", "processResources");
 
         project.getTasks().getByName("build").dependsOn(changelog);
 
         Jar jar = (Jar) project.getTasks().getByName("jar");
-        jar.from(delayedFile(changelogFile));
+
+        if (isJenkins)
+        {
+            jar.from(delayedFile(changelogFile));
+        }
 
         if (hasManifest)
         {
@@ -327,7 +347,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             Jar sourcesJar = makeTask("sourcesJar", Jar.class);
             sourcesJar.setClassifier("sources");
-            sourcesJar.from(delayedFile(changelogFile));
+
+            if (isJenkins)
+            {
+                sourcesJar.from(delayedFile(changelogFile));
+            }
+
             sourcesJar.from(delayedFile("LICENSE"));
             sourcesJar.from(delayedFile("build.gradle"));
             sourcesJar.from(delayedFile("settings.gradle"));
@@ -357,7 +382,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             Jar devJar = makeTask("devJar", Jar.class);
             devJar.setClassifier("dev");
-            devJar.from(delayedFile(changelogFile));
+
+            if (isJenkins)
+            {
+                devJar.from(delayedFile(changelogFile));
+            }
+
             devJar.from(delayedFile("LICENSE"));
             devJar.from(delayedFile("{BUILD_DIR}/classes/main/"));
             devJar.from(delayedFile("{BUILD_DIR}/classes/api/"));

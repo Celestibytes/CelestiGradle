@@ -46,6 +46,12 @@ import java.util.Map;
 
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
+    private static final String SEPARATOR = "separator";
+    private static final String SUMMARY = "summary";
+
+    private static final String STABLE = "stable";
+    private static final String LATEST = "latest";
+
     private static Project projectStatic;
     private static boolean fg;
 
@@ -507,18 +513,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         String separator;
         String summary;
 
-        if (data.containsKey("separator") && data.get("separator") instanceof String)
+        if (data.containsKey(SEPARATOR) && data.get(SEPARATOR) instanceof String)
         {
-            separator = (String) data.get("separator");
+            separator = (String) data.get(SEPARATOR);
         }
         else
         {
             throw new NullPointerException("No separator specified in version check json");
         }
 
-        if (data.containsKey("summary") && data.get("summary") instanceof String)
+        if (data.containsKey(SUMMARY) && data.get(SUMMARY) instanceof String)
         {
-            summary = (String) data.get("summary");
+            summary = (String) data.get(SUMMARY);
         }
         else
         {
@@ -538,11 +544,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         if (isStable)
         {
-            builder.append("stable");
+            builder.append(STABLE);
         }
         else
         {
-            builder.append("latest");
+            builder.append(LATEST);
         }
 
         String s = builder.toString();

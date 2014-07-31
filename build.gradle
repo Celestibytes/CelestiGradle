@@ -12,7 +12,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven'
 
 group = 'io.github.celestibytes'
-version = "2.0.2"
+version = "2.0.3"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
@@ -88,7 +88,7 @@ dependencies {
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 	
 	// PizzAnaLib
-	compile 'io.github.celestibytes:PizzAnaLib:1.0.0'
+	compile 'io.github.celestibytes:PizzAnaLib:1.1.1'
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"

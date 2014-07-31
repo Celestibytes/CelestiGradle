@@ -51,6 +51,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private static final String STABLE = "stable";
     private static final String LATEST = "latest";
+    private static final String DEV = "dev";
 
     private static Project projectStatic;
     private static boolean fg;
@@ -88,6 +89,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private boolean hasKeystore;
 
     private boolean isStable;
+    private boolean isDev;
 
     @Override
     public void apply(Project arg)
@@ -171,6 +173,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         hasKeystore = project.hasProperty("keystoreLocation");
 
         isStable = Version.parse(versionNumber).isStable();
+        isDev = Version.parse(versionNumber).isDev();
     }
 
     private void applyPlugins()
@@ -548,7 +551,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         else
         {
-            builder.append(LATEST);
+            if (isDev)
+            {
+                builder.append(DEV);
+            }
+            else
+            {
+                builder.append(LATEST);
+            }
         }
 
         String s = builder.toString();

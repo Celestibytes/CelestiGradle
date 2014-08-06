@@ -16,6 +16,7 @@ import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.gradle.reference.Versions;
 import celestibytes.pizzana.derp.DerpException;
+import celestibytes.pizzana.json.JSONUtil;
 import celestibytes.pizzana.version.Version;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
@@ -46,13 +47,6 @@ import java.util.Map;
 
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
-    private static final String SEPARATOR = "separator";
-    private static final String SUMMARY = "summary";
-
-    private static final String STABLE = "stable";
-    private static final String LATEST = "latest";
-    private static final String DEV = "dev";
-
     private static Project projectStatic;
     private static boolean fg;
 
@@ -89,7 +83,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private boolean hasKeystore;
 
     private boolean isStable;
-    private boolean isDev;
 
     @Override
     public void apply(Project arg)
@@ -173,7 +166,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         hasKeystore = project.hasProperty("keystoreLocation");
 
         isStable = Version.parse(versionNumber).isStable();
-        isDev = Version.parse(versionNumber).isDev();
     }
 
     private void applyPlugins()
@@ -467,7 +459,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             @Override
             public boolean isSatisfiedBy(Task task)
             {
-                return hasVersionCheck;
+                return hasVersionCheck && isStable;
             }
         });
         processJson.doLast(new Action<Task>()
@@ -501,6 +493,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 {
                     e.printStackTrace();
                 }
+                catch (DerpException e)
+                {
+                    e.printStackTrace();
+                }
             }
         });
         processJson.dependsOn("uploadArchives");
@@ -511,27 +507,27 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         release.dependsOn(processJson);
     }
 
-    private Map<String, Object> processMaps(Map<String, Object> data) throws IOException
+    private Map<String, Object> processMaps(Map<String, Object> data) throws IOException, DerpException
     {
         String separator;
         String summary;
 
-        if (data.containsKey(SEPARATOR) && data.get(SEPARATOR) instanceof String)
+        if (data.containsKey(JSONUtil.SEPARATOR) && data.get(JSONUtil.SEPARATOR) instanceof String)
         {
-            separator = (String) data.get(SEPARATOR);
+            separator = (String) data.get(JSONUtil.SEPARATOR);
         }
         else
         {
-            throw new NullPointerException("No separator specified in version check json");
+            throw new DerpException("No separator specified in version check json", new NullPointerException());
         }
 
-        if (data.containsKey(SUMMARY) && data.get(SUMMARY) instanceof String)
+        if (data.containsKey(JSONUtil.SUMMARY) && data.get(JSONUtil.SUMMARY) instanceof String)
         {
-            summary = (String) data.get(SUMMARY);
+            summary = (String) data.get(JSONUtil.SUMMARY);
         }
         else
         {
-            throw new NullPointerException("No summary specified in version check json");
+            throw new DerpException("No summary specified in version check json", new NullPointerException());
         }
 
         StringBuilder builder = new StringBuilder();
@@ -543,22 +539,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             builder.append(minecraftVersion);
             builder.append(separator);
-        }
-
-        if (isStable)
-        {
-            builder.append(STABLE);
-        }
-        else
-        {
-            if (isDev)
-            {
-                builder.append(DEV);
-            }
-            else
-            {
-                builder.append(LATEST);
-            }
         }
 
         String s = builder.toString();

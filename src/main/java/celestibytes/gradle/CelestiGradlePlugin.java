@@ -533,12 +533,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         StringBuilder builder = new StringBuilder();
 
         builder.append(versionCheckId);
-        builder.append(separator);
 
         if (isMinecraftMod)
         {
-            builder.append(minecraftVersion);
             builder.append(separator);
+            builder.append(minecraftVersion);
         }
 
         String s = builder.toString();

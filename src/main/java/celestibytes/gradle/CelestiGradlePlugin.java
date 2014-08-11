@@ -483,11 +483,46 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
                     Map<String, Object> data = new Gson().fromJson(json, Map.class);
 
+                    String separator;
+                    String summary;
+
+                    if (data.containsKey(JSONUtil.SEPARATOR) && data.get(JSONUtil.SEPARATOR) instanceof String)
+                    {
+                        separator = (String) data.get(JSONUtil.SEPARATOR);
+                    }
+                    else
+                    {
+                        throw new DerpException("No separator specified in data json", new NullPointerException());
+                    }
+
+                    if (data.containsKey(JSONUtil.SUMMARY) && data.get(JSONUtil.SUMMARY) instanceof String)
+                    {
+                        summary = (String) data.get(JSONUtil.SUMMARY);
+                    }
+                    else
+                    {
+                        throw new DerpException("No summary specified in data json", new NullPointerException());
+                    }
+
+                    urlConnection = new URL(Reference.MAVEN + "data.json").openConnection();
+
+                    urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
+                    urlConnection.connect();
+
+                    inputStream = urlConnection.getInputStream();
+
+                    json = new String(ByteStreams.toByteArray(inputStream));
+
+                    inputStream.close();
+
+                    data = new Gson().fromJson(json, Map.class);
+
                     Map<String, String> args = newHashMap();
-                    args.put("file", filesmaven + "/data.json");
+                    args.put("file", filesmaven + "/" + versionCheckId + ".json");
                     invokeAnt("delete", args);
 
-                    writeJsonToFile(project.file(filesmaven + "/data.json"), processMaps(data));
+                    writeJsonToFile(project.file(filesmaven + "/" + versionCheckId + ".json"),
+                                    processMaps(data, separator, summary));
                 }
                 catch (IOException e)
                 {
@@ -507,37 +542,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         release.dependsOn(processJson);
     }
 
-    private Map<String, Object> processMaps(Map<String, Object> data) throws IOException, DerpException
+    private Map<String, Object> processMaps(Map<String, Object> data, String separator, String summary)
+            throws IOException, DerpException
     {
-        String separator;
-        String summary;
-
-        if (data.containsKey(JSONUtil.SEPARATOR) && data.get(JSONUtil.SEPARATOR) instanceof String)
-        {
-            separator = (String) data.get(JSONUtil.SEPARATOR);
-        }
-        else
-        {
-            throw new DerpException("No separator specified in version check json", new NullPointerException());
-        }
-
-        if (data.containsKey(JSONUtil.SUMMARY) && data.get(JSONUtil.SUMMARY) instanceof String)
-        {
-            summary = (String) data.get(JSONUtil.SUMMARY);
-        }
-        else
-        {
-            throw new DerpException("No summary specified in version check json", new NullPointerException());
-        }
-
         StringBuilder builder = new StringBuilder();
-
-        builder.append(versionCheckId);
 
         if (isMinecraftMod)
         {
-            builder.append(separator);
             builder.append(minecraftVersion);
+        }
+        else
+        {
+            builder.append("version");
         }
 
         String s = builder.toString();

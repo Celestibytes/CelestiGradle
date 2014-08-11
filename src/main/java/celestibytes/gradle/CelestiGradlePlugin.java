@@ -504,7 +504,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                         throw new DerpException("No summary specified in data json", new NullPointerException());
                     }
 
-                    urlConnection = new URL(Reference.MAVEN + "data.json").openConnection();
+                    urlConnection = new URL(Reference.MAVEN + versionCheckId + ".json").openConnection();
 
                     urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
                     urlConnection.connect();

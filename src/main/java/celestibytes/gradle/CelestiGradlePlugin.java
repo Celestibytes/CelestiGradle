@@ -76,6 +76,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static String baublesMinecraft;
     private static boolean needsBaubles = false;
 
+    private static boolean scala = true;
+
     private Project project;
 
     private String filesmaven;
@@ -172,6 +174,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         if (!fg)
         {
+            if (scala)
+            {
+                applyExternalPlugin("scala");
+            }
+
             applyExternalPlugin("java");
             applyExternalPlugin("maven");
             applyExternalPlugin("eclipse");
@@ -357,6 +364,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             sourcesJar.from(delayedFile("LICENSE"));
             sourcesJar.from(delayedFile("build.gradle"));
             sourcesJar.from(delayedFile("settings.gradle"));
+
+            if (scala)
+            {
+                sourcesJar.from(delayedFile("{BUILD_DIR}/sources/scala/"));
+            }
+
             sourcesJar.from(delayedFile("{BUILD_DIR}/sources/java/"));
             sourcesJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
             sourcesJar.from(delayedFile("gradlew"));
@@ -373,6 +386,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
             Jar apiJar = makeTask("apiJar", Jar.class);
             apiJar.setClassifier("api");
+
+            if (scala)
+            {
+                apiJar.from(delayedFile("{BUILD_DIR}/sources/scala/" + apiDir), new CopyInto(apiDir));
+            }
+
             apiJar.from(delayedFile("{BUILD_DIR}/sources/java/" + apiDir), new CopyInto(apiDir));
             apiJar.dependsOn(jar);
             apiJar.setExtension("jar");
@@ -710,12 +729,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public static String getCWVersion(Project project, String field) throws IOException
     {
-        return getProperty(project, "src/main/java/celestibytes/celestialwizardry/reference/Versions.java", field);
+        String s = scala ? "scala" : "java";
+        return getProperty(project, "src/main/" + s + "/celestibytes/celestialwizardry/reference/Versions.java", field);
     }
 
     public static String getDgCVersion(Project project, String field) throws IOException
     {
-        return getProperty(project, "src/main/java/pizzana/doughcraft/reference/Versions.java", field);
+        String s = scala ? "scala" : "java";
+        return getProperty(project, "src/main/" + s + "/pizzana/doughcraft/reference/Versions.java", field);
     }
 
     public static String getCGVersion(Project project, String field) throws IOException
@@ -725,11 +746,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public static String getCoreVersion(Project project, String field) throws IOException
     {
-        return getProperty(project, "src/main/java/celestibytes/core/reference/Versions.java", field);
+        String s = scala ? "scala" : "java";
+        return getProperty(project, "src/main/" + s + "/celestibytes/core/reference/Versions.java", field);
     }
 
     public static String getTTVersion(Project project, String field) throws IOException
     {
+        // String s = scala ? "scala" : "java";
         return getProperty(project, "src/celestibytes/tankytanks/reference/Versions.java", field);
     }
 
@@ -741,15 +764,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         String prefix = "public static final String " + field;
         List<String> lines = (List<String>) FileUtils.readLines(project.file(file));
 
-        for (String s : lines)
+        for (String line : lines)
         {
-            s = s.trim();
+            line = line.trim();
 
-            if (s.startsWith(prefix))
+            if (line.startsWith(prefix))
             {
-                s = s.substring(prefix.length(), s.length() - 1);
-                s = s.replace('=', ' ').replace('"', ' ').replaceAll(" +", " ").trim();
-                property = s;
+                line = line.substring(prefix.length(), line.length() - 1);
+                line = line.replace('=', ' ').replace('"', ' ').replaceAll(" +", " ").trim();
+                property = line;
                 break;
             }
         }
@@ -909,5 +932,26 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         baublesMinecraft = mc;
         needsBaubles = true;
         return s;
+    }
+
+    public static boolean noScala()
+    {
+        return setNoScala();
+    }
+
+    public static boolean setNoScala()
+    {
+        return setScala(false);
+    }
+
+    public static boolean scala(boolean b)
+    {
+        return setScala(b);
+    }
+
+    public static boolean setScala(boolean b)
+    {
+        scala = b;
+        return b;
     }
 }

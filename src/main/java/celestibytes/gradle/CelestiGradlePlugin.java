@@ -76,7 +76,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static String baublesMinecraft;
     private static boolean needsBaubles = false;
 
-    private static boolean scala = true;
+    private static boolean scala = false;
 
     private Project project;
 
@@ -761,7 +761,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         String property = "unknown";
 
-        String prefix = "public static final String " + field;
+        String prefix = scala ? "final val " + field + ": String" : "public static final String " + field;
         List<String> lines = (List<String>) FileUtils.readLines(project.file(file));
 
         for (String line : lines)
@@ -934,14 +934,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return s;
     }
 
-    public static boolean noScala()
+    public static boolean scala()
     {
-        return setNoScala();
+        return scala(true);
     }
 
-    public static boolean setNoScala()
+    public static boolean setScala()
     {
-        return setScala(false);
+        return setScala(true);
     }
 
     public static boolean scala(boolean b)

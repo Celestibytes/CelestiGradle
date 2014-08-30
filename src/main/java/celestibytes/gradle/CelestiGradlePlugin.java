@@ -15,13 +15,17 @@ import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.gradle.reference.Versions;
+
 import celestibytes.pizzana.derp.DerpException;
 import celestibytes.pizzana.json.JSONUtil;
 import celestibytes.pizzana.version.Version;
+
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
+
 import groovy.lang.Closure;
+
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
@@ -62,6 +66,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private static List<String> artifactsList = new ArrayList<String>();
 
+    @SuppressWarnings("rawtypes")
     private static Closure manifest;
     private static boolean hasManifest = false;
 
@@ -856,11 +861,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return s;
     }
 
+    @SuppressWarnings("rawtypes")
     public static Closure manifest(Closure c)
     {
         return setManifest(c);
     }
 
+    @SuppressWarnings("rawtypes")
     public static Closure setManifest(Closure c)
     {
         hasManifest = true;

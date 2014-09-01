@@ -18,6 +18,7 @@ import celestibytes.pizzana.derp.DerpException;
 import celestibytes.pizzana.json.JSONUtil;
 import celestibytes.pizzana.version.Version;
 
+import celestibytes.gradle.dependency.Dependency;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.gradle.reference.Versions;
@@ -109,6 +110,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static boolean useLibsFile = false;
 
     private static List<String> addedLibs = Lists.newArrayList();
+    
+    private static Map<String, Dependency> knownDeps = Maps.newHashMap();
+    
+    /**
+     * First the alias, then the knownDeps key it leads to
+     */
+    private static Map<String, String> knownAliases = Maps.newHashMap();
     
     private Project project;
     
@@ -274,36 +282,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             addDependency(project.fileTree("libs"));
         }
         
-        if (libs.contains("jinput"))
-        {
-            addDependency("net.java.jinput", "jinput", "2.0.6");
-        }
-        
-        if (libs.contains("lwjgl"))
-        {
-            addDependency("org.lwjgl.lwjgl", "lwjgl_util", "2.9.1");
-            addDependency("org.lwjgl.lwjgl", "lwjgl", "2.9.1");
-        }
-        
-        if (libs.contains("lzma"))
-        {
-            addDependency("com.github.jponge", "lzma-java", "1.3");
-        }
-        
-        if (libs.contains("asm"))
-        {
-            addDependency("org.ow2.asm", "asm-debug-all", "5.0.3");
-        }
-        
-        if (libs.contains("akka") || libs.contains("akka-actor"))
-        {
-            addDependency("org.typesafe.akka", "akka-actor_2.11", "2.3.5");
-        }
-        
-        if (libs.contains("config"))
-        {
-            addDependency("org.typesafe", "config", "1.2.1");
-        }
+        registerDep("jinput", "net.java.jinput", "jinput", "2.0.6");
+        registerDep("lwjgl", "org.lwjgl.lwjgl", "lwjgl", "2.9.1");
+        registerDep("lwjgl_util", "org.lwjgl.lwjgl", "lwjgl_util", "2.9.1", "lwjgl");
+        registerDep("lzma", "com.github.jponge", "lzma-java", "1.3", "lzma-java");
+        registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug", "asm-debug-all");
+        registerDep("akka", "org.typesafe.akka", "akka-actor_2.11", "2.3.5", "akka-actor");
+        registerDep("config", "org.typesafe", "config", "1.2.1");
         
         if (scala || libs.contains("scala"))
         {
@@ -882,12 +867,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         addDependency(project, dependency);
     }
     
-    private static void addDependency(Project project, String group, String name, String version)
+    public static void addDependency(Project project, String group, String name, String version)
     {
         addDependency(project, group + ":" + name + ":" + version);
     }
     
-    private static void addDependency(Project project, Object dependency)
+    public static void addDependency(Project project, Object dependency)
     {
         if (dependency instanceof String && addedLibs.contains(dependency))
         {
@@ -899,6 +884,26 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (dependency instanceof String)
         {
             addedLibs.add((String) dependency);
+        }
+    }
+    
+    private void registerDep(String name, String group, String artifact, String version, String... aliases)
+    {
+        registerDep(project, name, group, artifact, version, aliases);
+    }
+    
+    public static void registerDep(Project project, String name, String group, String artifact, String version, String... aliases)
+    {
+        if (knownDeps.containsKey(name))
+        {
+            return;
+        }
+        
+        knownDeps.put(name, new Dependency(name, group, artifact, version, aliases));
+        
+        for (String alias : aliases)
+        {
+            knownAliases.put(alias, name);
         }
     }
     

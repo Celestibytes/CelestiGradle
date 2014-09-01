@@ -65,7 +65,6 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO Add ability to read all dependencies from a single file.
  *
  * @author PizzAna
  *
@@ -105,6 +104,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static boolean scala = false;
 
     private static List<String> libs = Lists.newArrayList();
+    private static String libsFile;
+    private static boolean useLibsFile = false;
+    
+    private static List<String> addedLibs = Lists.newArrayList();
 
     private Project project;
 
@@ -228,18 +231,38 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private void addRepositories()
     {
         project.allprojects(new Action<Project>()
-                {
+        {
             @Override
             public void execute(Project project)
             {
                 addMavenRepo(project, "cbts", Reference.MAVEN);
                 project.getRepositories().mavenCentral();
             }
-                });
+        });
     }
 
+    @SuppressWarnings("unchecked")
     private void addDependencies()
     {
+        if (useLibsFile)
+        {
+            try
+            {
+                List<String> lines = FileUtils.readLines(project.file(libsFile));
+                
+                for (String line : lines)
+                {
+                    line = line.trim();
+                    
+                    addDependency(line.trim());
+                }
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        
         if (needsCore)
         {
             addDependency(delayedString("{CORE_DEV_ARTIFACT}").call());
@@ -451,6 +474,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (libs.contains("ewah") || libs.contains("javaewah") || libs.contains("javaEWAH"))
         {
             addDependency("com.googlecode.javaewah", "javaEWAH", "0.8.12");
+        }
+        
+        for (String s : libs)
+        {
+            addDependency(s);
         }
     }
 
@@ -824,7 +852,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         data.put(s, versionDescription);
 
         return data;
-            }
+     }
 
     @SuppressWarnings("unused")
     private static <K, V> Map<K, V> newMap()
@@ -860,7 +888,17 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private static void addDependency(Project project, Object dependency)
     {
+        if (dependency instanceof String && addedLibs.contains((String) dependency))
+        {
+            return;
+        }
+        
         project.getDependencies().add("compile", dependency);
+        
+        if (dependency instanceof String)
+        {
+            addedLibs.add((String) dependency);
+        }
     }
 
     public static void displayBanner()
@@ -1233,6 +1271,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static String setLib(String s)
     {
         libs.add(s);
+        return s;
+    }
+    
+    public static String libsFile(String s)
+    {
+        return setLibsFile(s);
+    }
+    
+    public static String setLibsFile(String s)
+    {
+        libsFile = s;
+        useLibsFile = true;
         return s;
     }
 }

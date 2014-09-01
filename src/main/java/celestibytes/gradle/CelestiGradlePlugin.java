@@ -1274,6 +1274,16 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return s;
     }
     
+    public static String libsFile()
+    {
+        return setLibsFile(Reference.DEFAULT_DEPS_FILE);
+    }
+    
+    public static String setLibsFile()
+    {
+        return setLibsFile(Reference.DEFAULT_DEPS_FILE);
+    }
+    
     public static String libsFile(String s)
     {
         return setLibsFile(s);

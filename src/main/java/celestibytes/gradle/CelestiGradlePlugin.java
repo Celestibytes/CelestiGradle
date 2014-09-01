@@ -57,6 +57,7 @@ import groovy.lang.Closure;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -903,6 +904,36 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     public static void displayBanner()
     {
+        try
+        {
+            URLConnection urlConnection = new URL(Reference.VERSION_CHECK_URL).openConnection();
+            urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
+            urlConnection.connect();
+            
+            InputStream inputStream = urlConnection.getInputStream();
+            
+            String data = new String(ByteStreams.toByteArray(inputStream));
+            
+            inputStream.close();
+            
+            Version remote = Version.parse(data);
+            
+            if (Version.parse(Versions.VERSION).compareTo(remote) < 0)
+            {
+                projectStatic.getLogger().lifecycle("****************************");
+                projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available");
+                projectStatic.getLogger().lifecycle(" " + data);
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        
         projectStatic.getLogger().lifecycle("****************************");
         projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
         projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);

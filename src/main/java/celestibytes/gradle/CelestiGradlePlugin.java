@@ -116,7 +116,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     /**
      * First the alias, then the knownDeps key it leads to
      */
-    private static Map<String, String> knownAliases = Maps.newHashMap();
+    private static Map<String, List<String>> knownAliases = Maps.newHashMap();
     
     private Project project;
     
@@ -289,20 +289,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug", "asm-debug-all");
         registerDep("akka", "org.typesafe.akka", "akka-actor_2.11", "2.3.5", "akka-actor");
         registerDep("config", "org.typesafe", "config", "1.2.1");
-        
-        if (scala || libs.contains("scala"))
-        {
-            addDependency("org.scala-lang", "scala-library", "2.11.2");
-            addDependency("org.scala-lang", "scala-reflect", "2.11.2");
-            addDependency("org.scala-lang", "scala-compiler", "2.11.2");
-            addDependency("org.scala-lang", "scala-actors", "2.11.2");
-            // TODO Not tested
-        }
-        
-        if (libs.contains("jopt") || libs.contains("jopt-simple"))
-        {
-            addDependency("net.sf.jopt-simple", "jopt-simple", "4.7");
-        }
+        registerDep("scala-library", "org.scala-lang", "scala-library", "2.11.2", "scala");
+        registerDep("scala-reflect", "org.scala-lang", "scala-reflect", "2.11.2", "scala");
+        registerDep("scala-compiler", "org.scala-lang", "scala-compiler", "2.11.2", "scala");
+        registerDep("scala-actors", "org.scala-lang", "scala-actors", "2.11.2", "scala");
+        registerDep("jopt", "net.sf.jopt-simple", "jopt-simple", "4.7", "jopt-simple");
         
         // TODO Add every commons library because why not :P
         if (libs.contains("commons") || libs.contains("apache-commons"))
@@ -460,6 +451,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (libs.contains("ewah") || libs.contains("javaewah") || libs.contains("javaEWAH"))
         {
             addDependency("com.googlecode.javaewah", "javaEWAH", "0.8.12");
+        }
+        
+        if (scala)
+        {
+            // TODO Automatically add scala deps
         }
 
         for (String s : libs)
@@ -901,9 +897,33 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         knownDeps.put(name, new Dependency(name, group, artifact, version, aliases));
         
-        for (String alias : aliases)
+        List<String> list;
+        
+        if (knownAliases.containsKey(name))
         {
-            knownAliases.put(alias, name);
+            list = knownAliases.get(name);
+        }
+        else
+        {
+            list = Lists.newArrayList();
+        }
+        
+        list.add(name);
+        knownAliases.put(name, list);
+        
+        for (String alias : aliases)
+        {            
+            if (knownAliases.containsKey(alias))
+            {
+                list = knownAliases.get(alias);
+            }
+            else
+            {
+                list = Lists.newArrayList();
+            }
+            
+            list.add(name);
+            knownAliases.put(alias, list);
         }
     }
     

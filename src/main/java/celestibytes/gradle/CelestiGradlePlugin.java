@@ -1,4 +1,26 @@
+/*
+ * Copyright (C) 2014 Celestibytes
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation; either version 2 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ */
+
 package celestibytes.gradle;
+
+import celestibytes.pizzana.derp.DerpException;
+import celestibytes.pizzana.json.JSONUtil;
+import celestibytes.pizzana.version.Version;
+
+import celestibytes.gradle.reference.Projects;
+import celestibytes.gradle.reference.Reference;
+import celestibytes.gradle.reference.Versions;
 
 import net.minecraftforge.gradle.CopyInto;
 import net.minecraftforge.gradle.FileLogListenner;
@@ -12,19 +34,10 @@ import net.minecraftforge.gradle.delayed.DelayedString;
 import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
-import celestibytes.gradle.reference.Projects;
-import celestibytes.gradle.reference.Reference;
-import celestibytes.gradle.reference.Versions;
-
-import celestibytes.pizzana.derp.DerpException;
-import celestibytes.pizzana.json.JSONUtil;
-import celestibytes.pizzana.version.Version;
-
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
-
-import groovy.lang.Closure;
 
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;
@@ -39,6 +52,8 @@ import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.bundling.Jar;
 
+import groovy.lang.Closure;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,6 +64,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * TODO Add ability to read all dependencies from a single file.
+ *
+ * @author PizzAna
+ *
+ */
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
     private static Project projectStatic;
@@ -64,7 +85,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static String basePackage;
     private static String dir;
 
-    private static List<String> artifactsList = new ArrayList<String>();
+    private static List<String> artifactsList = Lists.newArrayList();
 
     @SuppressWarnings("rawtypes")
     private static Closure manifest;
@@ -82,6 +103,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static boolean needsBaubles = false;
 
     private static boolean scala = false;
+
+    private static List<String> libs = Lists.newArrayList();
 
     private Project project;
 
@@ -135,7 +158,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         if (fg && !isMinecraftMod)
         {
             throw new ProjectConfigurationException("Project has forge plugin but isn't a Minecraft mod!",
-                                                    new DerpException());
+                    new DerpException());
         }
 
         if (isMinecraftMod)
@@ -145,14 +168,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 if (coreVersion == null)
                 {
                     throw new ProjectConfigurationException("You must set the core version number!",
-                                                            new NullPointerException());
+                            new NullPointerException());
                 }
             }
 
             if (minecraftVersion == null)
             {
                 throw new ProjectConfigurationException("You must set the minecraft version number!",
-                                                        new NullPointerException());
+                        new NullPointerException());
             }
         }
 
@@ -205,20 +228,229 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private void addRepositories()
     {
         project.allprojects(new Action<Project>()
-        {
+                {
             @Override
             public void execute(Project project)
             {
-                addMavenRepo(project, "cbs", Reference.MAVEN);
+                addMavenRepo(project, "cbts", Reference.MAVEN);
+                project.getRepositories().mavenCentral();
             }
-        });
+                });
     }
 
     private void addDependencies()
     {
         if (needsCore)
         {
-            project.getDependencies().add("compile", delayedString("{CORE_DEV_ARTIFACT}").call());
+            addDependency(delayedString("{CORE_DEV_ARTIFACT}").call());
+        }
+
+        if (!fg)
+        {
+            addDependency(project.fileTree("libs"));
+        }
+
+        if (libs.contains("jinput"))
+        {
+            addDependency("net.java.jinput", "jinput", "2.0.6");
+        }
+
+        if (libs.contains("lwjgl"))
+        {
+            addDependency("org.lwjgl.lwjgl", "lwjgl_util", "2.9.1");
+            addDependency("org.lwjgl.lwjgl", "lwjgl", "2.9.1");
+        }
+
+        if (libs.contains("lzma"))
+        {
+            addDependency("com.github.jponge", "lzma-java", "1.3");
+        }
+
+        if (libs.contains("asm"))
+        {
+            addDependency("org.ow2.asm", "asm-debug-all", "5.0.3");
+        }
+
+        if (libs.contains("akka") || libs.contains("akka-actor"))
+        {
+            addDependency("org.typesafe.akka", "akka-actor_2.11", "2.3.5");
+        }
+
+        if (libs.contains("config"))
+        {
+            addDependency("org.typesafe", "config", "1.2.1");
+        }
+
+        if (scala || libs.contains("scala"))
+        {
+            addDependency("org.scala-lang", "scala-library", "2.11.2");
+            addDependency("org.scala-lang", "scala-reflect", "2.11.2");
+            addDependency("org.scala-lang", "scala-compiler", "2.11.2");
+            addDependency("org.scala-lang", "scala-actors", "2.11.2");
+            // TODO Not tested
+        }
+
+        if (libs.contains("jopt") || libs.contains("jopt-simple"))
+        {
+            addDependency("net.sf.jopt-simple", "jopt-simple", "4.7");
+        }
+
+        // TODO Add every commons library because why not :P
+        if (libs.contains("commons") || libs.contains("apache-commons"))
+        {
+            addDependency("org.apache.commons", "commons-lang3", "3.3.2");
+            addDependency("commons-io", "commons-io", "2.4");
+            addDependency("org.apache.commons", "commons-compress", "1.8.1");
+            addDependency("org.apache.commons", "commons-exec", "1.2");
+            addDependency("org.apache.commons", "commons-math3", "3.3");
+            addDependency("commons-codec", "commons-codec", "1.9");
+            addDependency("commons-logging", "commons-logging", "1.2");
+            addDependency("org.apache.commons", "commons-collections4", "4.0");
+        }
+        else
+        {
+            if (libs.contains("commons-lang") || libs.contains("lang") || libs.contains("commons-lang3")
+                    || libs.contains("lang3"))
+            {
+                addDependency("org.apache.commons", "commons-lang3", "3.3.2");
+            }
+
+            if (libs.contains("commons-io") || libs.contains("io"))
+            {
+                addDependency("commons-io", "commons-io", "2.4");
+            }
+
+            if (libs.contains("commons-compress") || libs.contains("compress"))
+            {
+                addDependency("org.apache.commons", "commons-compress", "1.8.1");
+            }
+
+            if (libs.contains("commons-exec") || libs.contains("exec"))
+            {
+                addDependency("org.apache.commons", "commons-exec", "1.2");
+            }
+
+            if (libs.contains("commons-math") || libs.contains("math") || libs.contains("commons-math3")
+                    || libs.contains("math3"))
+            {
+                addDependency("org.apache.commons", "commons-math3", "3.3");
+            }
+
+            if (libs.contains("commons-codec") || libs.contains("codec"))
+            {
+                addDependency("commons-codec", "commons-codec", "1.9");
+            }
+
+            if (libs.contains("commons-logging") || libs.contains("logging"))
+            {
+                addDependency("commons-logging", "commons-logging", "1.2");
+            }
+
+            if (libs.contains("commons-collections") || libs.contains("collections")
+                    || libs.contains("commons-collections4") || libs.contains("collections4"))
+            {
+                addDependency("org.apache.commons", "commons-collections4", "4.0");
+            }
+        }
+
+        if (libs.contains("http"))
+        {
+            addDependency("org.apache.httpcomponents", "httpclient", "4.3.5");
+            addDependency("org.apache.httpcomponents", "httpcore", "4.3.2");
+            addDependency("org.apache.httpcomponents", "httpmime", "4.3.5");
+        }
+        else
+        {
+            if (libs.contains("httpclient") || libs.contains("http-client"))
+            {
+                addDependency("org.apache.httpcomponents", "httpclient", "4.3.5");
+            }
+
+            if (libs.contains("httpcore") || libs.contains("http-core"))
+            {
+                addDependency("org.apache.httpcomponents", "httpcore", "4.3.2");
+            }
+
+            if (libs.contains("httpmime") || libs.contains("http-mime"))
+            {
+                addDependency("org.apache.httpcomponents", "httpmime", "4.3.5");
+            }
+        }
+
+        if (libs.contains("vecmath"))
+        {
+            addDependency("java3d", "vecmath", "1.3.1");
+        }
+
+        if (libs.contains("trove") || libs.contains("trove4j"))
+        {
+            addDependency("net.sf.trove4j", "trove4j", "3.0.3");
+        }
+
+        if (libs.contains("netty"))
+        {
+            addDependency("io.netty", "netty-all", "4.0.23.Final");
+        }
+
+        if (libs.contains("jutils"))
+        {
+            addDependency("net.java.jutils", "jutils", "1.0.0");
+        }
+
+        if (libs.contains("gson"))
+        {
+            addDependency("com.google.code.gson", "gson", "2.3");
+        }
+
+        if (libs.contains("log4j"))
+        {
+            addDependency("org.apache.logging.log4j", "log4j-core", "2.0.2");
+            addDependency("org.apache.logging.log4j", "log4j-api", "2.0.2");
+        }
+
+        if (libs.contains("guava"))
+        {
+            addDependency("com.google.guava", "guava", "18.0");
+        }
+
+        if (libs.contains("argo"))
+        {
+            addDependency("net.sourceforge.argo", "argo", "3.12");
+        }
+
+        if (libs.contains("diff") || libs.contains("diff4j"))
+        {
+            addDependency("com.cloudbees", "diff4j", "1.2");
+        }
+
+        if (libs.contains("jAstyle") || libs.contains("jastyle"))
+        {
+            addDependency("com.github.abrarsyed.jastyle", "jAstyle", "1.2");
+        }
+
+        if (libs.contains("javaxdelta"))
+        {
+            addDependency("com.nothome", "javaxdelta", "2.0.1");
+        }
+
+        if (libs.contains("named-regexp"))
+        {
+            addDependency("com.github.tony19", "named-regexp", "0.2.3");
+        }
+
+        if (libs.contains("localizer"))
+        {
+            addDependency("org.jvnet.localizer", "localizer", "1.12");
+        }
+
+        if (libs.contains("jsch"))
+        {
+            addDependency("com.jcraft", "jsch", "0.1.51");
+        }
+
+        if (libs.contains("ewah") || libs.contains("javaewah") || libs.contains("javaEWAH"))
+        {
+            addDependency("com.googlecode.javaewah", "javaEWAH", "0.8.12");
         }
     }
 
@@ -265,8 +497,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             cleanEveryBaubles.delete(delayedFile(baublesDest).call());
         }
 
-        cleanEveryBaubles.setDescription(
-                "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
+        cleanEveryBaubles
+        .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
         cleanEveryBaubles.setGroup(Reference.NAME);
 
         Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
@@ -276,23 +508,23 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             cleanBaubles.delete(file);
         }
 
-        cleanBaubles.setDescription(
-                "Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory " +
-                        "(excluding the up-to-date one)");
+        cleanBaubles
+        .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory "
+                + "(excluding the up-to-date one)");
         cleanBaubles.setGroup(Reference.NAME);
 
         DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
         getBaubles.setUrl(delayedString(baublesUrl));
         getBaubles.setOutput(delayedFile(baublesDest));
         getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
-        {
+                {
             @Override
             public boolean isSatisfiedBy(Task task)
             {
                 DelayedFile excepted = delayedFile(baublesDest);
                 return excepted.call().exists() && !excepted.call().isDirectory();
             }
-        });
+                });
         getBaubles.setDescription("Downloads the correct version of Baubles");
         getBaubles.setGroup(Reference.NAME);
         getBaubles.dependsOn(cleanBaubles);
@@ -304,8 +536,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
 
-        final boolean isJenkins = System.getenv("JOB_NAME") != null && project.hasProperty("jenkins_server") && project
-                .hasProperty("jenkins_password") && project.hasProperty("jenkins_user");
+        final boolean isJenkins = System.getenv("JOB_NAME") != null && project.hasProperty("jenkins_server")
+                && project.hasProperty("jenkins_password") && project.hasProperty("jenkins_user");
 
         ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
 
@@ -320,13 +552,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
 
         changelog.onlyIf(new Spec<Task>()
-        {
+                {
             @Override
             public boolean isSatisfiedBy(Task task)
             {
                 return isJenkins;
             }
-        });
+                });
 
         changelog.dependsOn("classes", "processResources");
 
@@ -447,15 +679,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             signJar.getInputs().property("keystore_password", keystorePassword);
             signJar.getOutputs().file(jarPath);
             signJar.onlyIf(new Spec<Task>()
-            {
+                    {
                 @Override
                 public boolean isSatisfiedBy(Task task)
                 {
                     return hasKeystore;
                 }
-            });
+                    });
             signJar.doLast(new Action<Task>()
-            {
+                    {
                 @Override
                 public void execute(Task task)
                 {
@@ -467,7 +699,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     args.put("storepass", keystorePassword);
                     invokeAnt("signjar", args);
                 }
-            });
+                    });
         }
 
         signJar.dependsOn("build");
@@ -479,15 +711,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         DefaultTask processJson = makeTask("processJson");
         processJson.onlyIf(new Spec<Task>()
-        {
+                {
             @Override
             public boolean isSatisfiedBy(Task task)
             {
                 return hasVersionCheck && isStable;
             }
-        });
+                });
         processJson.doLast(new Action<Task>()
-        {
+                {
             @Override
             @SuppressWarnings("unchecked")
             public void execute(Task task)
@@ -546,7 +778,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     invokeAnt("delete", args);
 
                     writeJsonToFile(project.file(filesmaven + "/" + versionCheckId + ".json"),
-                                    processMaps(data, separator, summary));
+                            processMaps(data, separator, summary));
                 }
                 catch (IOException e)
                 {
@@ -557,7 +789,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     e.printStackTrace();
                 }
             }
-        });
+                });
         processJson.dependsOn("uploadArchives");
 
         DefaultTask release = makeTask("release");
@@ -568,7 +800,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     private Map<String, Object> processMaps(Map<String, Object> data, String separator, String summary)
             throws IOException, DerpException
-    {
+            {
         StringBuilder builder = new StringBuilder();
 
         if (isMinecraftMod)
@@ -592,7 +824,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         data.put(s, versionDescription);
 
         return data;
-    }
+            }
 
     @SuppressWarnings("unused")
     private static <K, V> Map<K, V> newMap()
@@ -609,6 +841,26 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         FileUtils.writeStringToFile(file, new Gson().toJson(data));
         return file;
+    }
+
+    private void addDependency(String group, String name, String version)
+    {
+        addDependency(project, group, name, version);
+    }
+
+    private void addDependency(Object dependency)
+    {
+        addDependency(project, dependency);
+    }
+
+    private static void addDependency(Project project, String group, String name, String version)
+    {
+        addDependency(project, group + ":" + name + ":" + version);
+    }
+
+    private static void addDependency(Project project, Object dependency)
+    {
+        project.getDependencies().add("compile", dependency);
     }
 
     public static void displayBanner()
@@ -678,27 +930,27 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
     {
         return project.getRepositories().maven(new Action<MavenArtifactRepository>()
-        {
+                {
             @Override
             public void execute(MavenArtifactRepository repo)
             {
                 repo.setName(name);
                 repo.setUrl(url);
             }
-        });
+                });
     }
 
     public static FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
     {
         return project.getRepositories().flatDir(new Action<FlatDirectoryArtifactRepository>()
-        {
+                {
             @Override
             public void execute(FlatDirectoryArtifactRepository repo)
             {
                 repo.setName(name);
                 repo.dirs(dirs);
             }
-        });
+                });
     }
 
     protected DelayedString delayedString(String path)
@@ -767,7 +1019,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         String property = "unknown";
 
         String prefix = scala ? "final val " + field + ": String" : "public static final String " + field;
-        List<String> lines = (List<String>) FileUtils.readLines(project.file(file));
+        List<String> lines = FileUtils.readLines(project.file(file));
 
         for (String line : lines)
         {
@@ -960,5 +1212,27 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         scala = b;
         return b;
+    }
+
+    public static List<String> libsList(List<String> list)
+    {
+        return setLibsList(list);
+    }
+
+    public static List<String> setLibsList(List<String> list)
+    {
+        libs = list;
+        return list;
+    }
+
+    public static String lib(String s)
+    {
+        return setLib(s);
+    }
+
+    public static String setLib(String s)
+    {
+        libs.add(s);
+        return s;
     }
 }

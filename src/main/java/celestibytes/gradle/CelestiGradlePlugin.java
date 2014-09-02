@@ -285,17 +285,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("jinput", "net.java.jinput", "jinput", "2.0.6");
         registerDep("lwjgl", "org.lwjgl.lwjgl", "lwjgl", "2.9.1");
         registerDep("lwjgl_util", "org.lwjgl.lwjgl", "lwjgl_util", "2.9.1", "lwjgl");
-        registerDep("lzma", "com.github.jponge", "lzma-java", "1.3", "lzma-java");
-        registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug", "asm-debug-all");
+        registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
+        registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");
         registerDep("akka", "org.typesafe.akka", "akka-actor_2.11", "2.3.5", "akka-actor");
         registerDep("config", "org.typesafe", "config", "1.2.1");
         registerDep("scala-library", "org.scala-lang", "scala-library", "2.11.2", "scala");
         registerDep("scala-reflect", "org.scala-lang", "scala-reflect", "2.11.2", "scala");
         registerDep("scala-compiler", "org.scala-lang", "scala-compiler", "2.11.2", "scala");
         registerDep("scala-actors", "org.scala-lang", "scala-actors", "2.11.2", "scala");
-        registerDep("jopt", "net.sf.jopt-simple", "jopt-simple", "4.7", "jopt-simple");
+        registerDep("jopt", "net.sf.jopt-simple", "jopt-simple", "4.7");
         
         // TODO Add every commons library because why not :P
+        registerDep("commons-lang", "org.apache.commons", "commons-lang3", "3.3.2");
         if (libs.contains("commons") || libs.contains("apache-commons"))
         {
             addDependency("org.apache.commons", "commons-lang3", "3.3.2");
@@ -883,12 +884,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
-    private void registerDep(String name, String group, String artifact, String version, String... aliases)
+    /* private void registerDep(String name, String group, String artifact, String version, String... aliases)
     {
         registerDep(project, name, group, artifact, version, aliases);
-    }
+    } */
     
-    public static void registerDep(Project project, String name, String group, String artifact, String version, String... aliases)
+    public static void registerDep(String name, String group, String artifact, String version, String... aliases)
     {
         if (knownDeps.containsKey(name))
         {
@@ -908,8 +909,28 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             list = Lists.newArrayList();
         }
         
-        list.add(name);
+        if (!list.contains(name))
+        {
+            list.add(name);
+        }
+        
         knownAliases.put(name, list);
+        
+        if (knownAliases.containsKey(artifact))
+        {
+            list = knownAliases.get(artifact);
+        }
+        else
+        {
+            list = Lists.newArrayList();
+        }
+        
+        if (!list.contains(name))
+        {
+            list.add(name);
+        }
+        
+        knownAliases.put(artifact, list);
         
         for (String alias : aliases)
         {            
@@ -922,7 +943,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 list = Lists.newArrayList();
             }
             
-            list.add(name);
+            if (!list.contains(name))
+            {
+                list.add(name);
+            }
+            
             knownAliases.put(alias, list);
         }
     }

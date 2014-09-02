@@ -47,10 +47,12 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.ProjectConfigurationException;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.maven.MavenDeployer;
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
+import org.gradle.api.tasks.Upload;
 import org.gradle.api.tasks.bundling.Jar;
 
 import groovy.lang.Closure;

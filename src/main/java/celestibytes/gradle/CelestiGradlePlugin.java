@@ -282,177 +282,53 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             addDependency(project.fileTree("libs"));
         }
         
-        registerDep("jinput", "net.java.jinput", "jinput", "2.0.6");
-        registerDep("lwjgl", "org.lwjgl.lwjgl", "lwjgl", "2.9.1");
-        registerDep("lwjgl_util", "org.lwjgl.lwjgl", "lwjgl_util", "2.9.1", "lwjgl");
         registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");
         registerDep("akka", "org.typesafe.akka", "akka-actor_2.11", "2.3.5", "akka-actor");
-        registerDep("config", "org.typesafe", "config", "1.2.1");
-        registerDep("scala-library", "org.scala-lang", "scala-library", "2.11.2", "scala");
-        registerDep("scala-reflect", "org.scala-lang", "scala-reflect", "2.11.2", "scala");
-        registerDep("scala-compiler", "org.scala-lang", "scala-compiler", "2.11.2", "scala");
-        registerDep("scala-actors", "org.scala-lang", "scala-actors", "2.11.2", "scala");
         registerDep("jopt", "net.sf.jopt-simple", "jopt-simple", "4.7");
+        registerDep("trove", "net.sf.trove4j", "trove4j", "3.0.3");
+        registerDep("netty", "io.netty", "netty-all", "4.0.23.Final");
+        
+        registerDep2("jinput", "net.java.jinput", "2.0.6");
+        registerDep2("lwjgl", "org.lwjgl.lwjgl", "2.9.1");
+        registerDep2("lwjgl_util", "org.lwjgl.lwjgl", "2.9.1", "lwjgl");
+        registerDep2("config", "org.typesafe", "1.2.1");
+        registerDep2("vecmath", "java3d", "1.3.1");
+        registerDep2("jutils", "net.java.jutils", "1.0.0");
+        registerDep2("gson", "com.google.code.gson", "2.3");
+        registerDep2("guava", "com.google.guava", "18.0");
+        registerDep2("argo", "net.sourceforge.argo", "3.12");
+        registerDep2("diff4j", "com.cloudbees", "1.2");
+        registerDep2("jAstyle", "com.github.abrarsyed.jastyle", "1.2", "jastyle");
+        registerDep2("javaxdelta", "com.nothome", "2.0.1");
+        registerDep2("named-regexp", "com.github.tony19", "0.2.3");
+        registerDep2("localizer", "org.jvnet.localizer", "1.12");
+        registerDep2("jsch", "com.jcraft", "0.1.51");
+        registerDep2("javaEWAH", "com.googlecode.javaewah", "0.8.12", "javaewah");
+        
+        registerScala2("library", "library");
+        registerScala2("reflect", "reflect");
+        registerScala2("compiler", "compiler");
+        registerScala2("actors", "actors");
         
         // TODO Add every commons library because why not :P
-        registerDep("commons-lang", "org.apache.commons", "commons-lang3", "3.3.2");
-        if (libs.contains("commons") || libs.contains("apache-commons"))
-        {
-            addDependency("org.apache.commons", "commons-lang3", "3.3.2");
-            addDependency("commons-io", "commons-io", "2.4");
-            addDependency("org.apache.commons", "commons-compress", "1.8.1");
-            addDependency("org.apache.commons", "commons-exec", "1.2");
-            addDependency("org.apache.commons", "commons-math3", "3.3");
-            addDependency("commons-codec", "commons-codec", "1.9");
-            addDependency("commons-logging", "commons-logging", "1.2");
-            addDependency("org.apache.commons", "commons-collections4", "4.0");
-        }
-        else
-        {
-            if (libs.contains("commons-lang") || libs.contains("lang") || libs.contains("commons-lang3")
-                    || libs.contains("lang3"))
-            {
-                addDependency("org.apache.commons", "commons-lang3", "3.3.2");
-            }
-            
-            if (libs.contains("commons-io") || libs.contains("io"))
-            {
-                addDependency("commons-io", "commons-io", "2.4");
-            }
-            
-            if (libs.contains("commons-compress") || libs.contains("compress"))
-            {
-                addDependency("org.apache.commons", "commons-compress", "1.8.1");
-            }
-            
-            if (libs.contains("commons-exec") || libs.contains("exec"))
-            {
-                addDependency("org.apache.commons", "commons-exec", "1.2");
-            }
-            
-            if (libs.contains("commons-math") || libs.contains("math") || libs.contains("commons-math3")
-                    || libs.contains("math3"))
-            {
-                addDependency("org.apache.commons", "commons-math3", "3.3");
-            }
-            
-            if (libs.contains("commons-codec") || libs.contains("codec"))
-            {
-                addDependency("commons-codec", "commons-codec", "1.9");
-            }
-            
-            if (libs.contains("commons-logging") || libs.contains("logging"))
-            {
-                addDependency("commons-logging", "commons-logging", "1.2");
-            }
-            
-            if (libs.contains("commons-collections") || libs.contains("collections")
-                    || libs.contains("commons-collections4") || libs.contains("collections4"))
-            {
-                addDependency("org.apache.commons", "commons-collections4", "4.0");
-            }
-        }
+        registerCommons("lang", "lang3", "3.3.2");
+        registerCommons("compress", "compress", "1.8.1");
+        registerCommons("exec", "exec", "1.2");
+        registerCommons("math", "math3", "3.3");
+        registerCommons("collections", "collections4", "4.0");
         
-        if (libs.contains("http"))
-        {
-            addDependency("org.apache.httpcomponents", "httpclient", "4.3.5");
-            addDependency("org.apache.httpcomponents", "httpcore", "4.3.2");
-            addDependency("org.apache.httpcomponents", "httpmime", "4.3.5");
-        }
-        else
-        {
-            if (libs.contains("httpclient") || libs.contains("http-client"))
-            {
-                addDependency("org.apache.httpcomponents", "httpclient", "4.3.5");
-            }
-            
-            if (libs.contains("httpcore") || libs.contains("http-core"))
-            {
-                addDependency("org.apache.httpcomponents", "httpcore", "4.3.2");
-            }
-            
-            if (libs.contains("httpmime") || libs.contains("http-mime"))
-            {
-                addDependency("org.apache.httpcomponents", "httpmime", "4.3.5");
-            }
-        }
+        registerCommons2("io", "io", "2.4");
+        registerCommons2("codec", "codec", "1.9");
+        registerCommons2("logging", "logging", "1.2");
         
-        if (libs.contains("vecmath"))
-        {
-            addDependency("java3d", "vecmath", "1.3.1");
-        }
+        registerHttp("core", "4.3.2");
         
-        if (libs.contains("trove") || libs.contains("trove4j"))
-        {
-            addDependency("net.sf.trove4j", "trove4j", "3.0.3");
-        }
+        registerHttp2("client");
+        registerHttp2("mime");
         
-        if (libs.contains("netty"))
-        {
-            addDependency("io.netty", "netty-all", "4.0.23.Final");
-        }
-        
-        if (libs.contains("jutils"))
-        {
-            addDependency("net.java.jutils", "jutils", "1.0.0");
-        }
-        
-        if (libs.contains("gson"))
-        {
-            addDependency("com.google.code.gson", "gson", "2.3");
-        }
-        
-        if (libs.contains("log4j"))
-        {
-            addDependency("org.apache.logging.log4j", "log4j-core", "2.0.2");
-            addDependency("org.apache.logging.log4j", "log4j-api", "2.0.2");
-        }
-        
-        if (libs.contains("guava"))
-        {
-            addDependency("com.google.guava", "guava", "18.0");
-        }
-        
-        if (libs.contains("argo"))
-        {
-            addDependency("net.sourceforge.argo", "argo", "3.12");
-        }
-        
-        if (libs.contains("diff") || libs.contains("diff4j"))
-        {
-            addDependency("com.cloudbees", "diff4j", "1.2");
-        }
-        
-        if (libs.contains("jAstyle") || libs.contains("jastyle"))
-        {
-            addDependency("com.github.abrarsyed.jastyle", "jAstyle", "1.2");
-        }
-        
-        if (libs.contains("javaxdelta"))
-        {
-            addDependency("com.nothome", "javaxdelta", "2.0.1");
-        }
-        
-        if (libs.contains("named-regexp"))
-        {
-            addDependency("com.github.tony19", "named-regexp", "0.2.3");
-        }
-        
-        if (libs.contains("localizer"))
-        {
-            addDependency("org.jvnet.localizer", "localizer", "1.12");
-        }
-        
-        if (libs.contains("jsch"))
-        {
-            addDependency("com.jcraft", "jsch", "0.1.51");
-        }
-        
-        if (libs.contains("ewah") || libs.contains("javaewah") || libs.contains("javaEWAH"))
-        {
-            addDependency("com.googlecode.javaewah", "javaEWAH", "0.8.12");
-        }
+        registerLog4j("core");
+        registerLog4j("api");
         
         if (scala)
         {
@@ -888,6 +764,109 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         registerDep(project, name, group, artifact, version, aliases);
     } */
+    
+    public static void registerScala2(String name, String artifact, String... aliases)
+    {
+        registerScala(name, artifact, "2.11.2", aliases);
+    }
+    
+    public static void registerScala(String name, String artifact, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 1];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "scala";
+        
+        registerDep("scala-" + name, "org.scala-lang", "scala-" + artifact, version, array);
+    }
+    
+    public static void registerCommons(String name, String artifact, String version, String... aliases)
+    {        
+        String[] array = new String[aliases.length + 2];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "apache-commons";
+        array[i++] = "commons";
+        
+        registerDep("commons-" + name, "org.apache.commons", "commons-" + artifact, version, array);
+    }
+    
+    public static void registerCommons2(String name, String artifact, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 2];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "apache-commons";
+        array[i++] = "commons";
+        
+        registerDep("commons-" + name, "commons-" + name, "commons-" + artifact, version, array);
+    }
+    
+    public static void registerHttp2(String name, String... aliases)
+    {        
+        registerHttp(name, "4.3.5", aliases);
+    }
+    
+    public static void registerHttp(String name, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 2];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "http";
+        array[i++] = "http-" + name;
+        
+        registerDep("http" + name, "org.apache.httpcomponents", "http" + name, version, array);
+    }
+    
+    public static void registerLog4j(String name, String... aliases)
+    {
+        String[] array = new String[aliases.length + 1];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "log4j";
+        
+        registerDep("log4j-" + name, "org.apache.logging.log4j", "log4j-" + name, "2.0.2", array);
+    }
+    
+    public static void registerDep2(String name, String group, String version, String... aliases)
+    {
+        registerDep(name, group, name, version, aliases);
+    }
     
     public static void registerDep(String name, String group, String artifact, String version, String... aliases)
     {

@@ -139,7 +139,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     /**
      * The id used to create remote version check files for the project.
      */
-    private static String versionCheckId;
+    private static String versionCheckUrl;
     
     /**
      * A {@code boolean} that tells if the project has a remote version check.
@@ -222,7 +222,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Apply this plugin to the given target object.
-     * 
+     *
      * @param target
      *            the target object.
      */
@@ -747,74 +747,59 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         processJson.doLast(new Action<Task>()
         {
             @Override
-            @SuppressWarnings("unchecked")
             public void execute(Task task)
             {
                 try
                 {
-                    URLConnection urlConnection = new URL(Reference.MAVEN + versionCheckId + ".json").openConnection();
+                    URLConnection urlConnection = new URL(versionCheckUrl + "/version.txt").openConnection();
+                    
+                    if (isMinecraftMod)
+                    {
+                        urlConnection = new URL(versionCheckUrl + "/" + minecraftVersion + ".txt").openConnection();
+                    }
                     
                     urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
                     urlConnection.connect();
                     
                     InputStream inputStream = urlConnection.getInputStream();
                     
-                    String json = new String(ByteStreams.toByteArray(inputStream));
+                    @SuppressWarnings("unused")
+                    @Deprecated
+                    String data = new String(ByteStreams.toByteArray(inputStream));
                     
                     inputStream.close();
-                    
-                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
                     
                     // TODO Think about alternative solutions for the version
                     // check location
                     Map<String, String> args = Maps.newHashMap();
-                    args.put("file", "./" + versionCheckId + ".json");
+                    
+                    if (isMinecraftMod)
+                    {
+                        args.put("file", "./" + minecraftVersion + ".txt");
+                    }
+                    else
+                    {
+                        args.put("file", "./version.txt");
+                    }
+                    
                     invokeAnt("delete", args);
                     
-                    FileUtils.writeStringToFile(project.file("./" + versionCheckId + ".json"),
-                            new Gson().toJson(processMaps(data)));
+                    if (isMinecraftMod)
+                    {
+                        FileUtils.writeStringToFile(project.file("./" + minecraftVersion + ".txt"), versionNumber);
+                    }
+                    else
+                    {
+                        FileUtils.writeStringToFile(project.file("./version.txt"), versionNumber);
+                    }
                 }
                 catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-                catch (DerpException e)
                 {
                     e.printStackTrace();
                 }
             }
         });
         processJson.dependsOn("uploadArchives");
-    }
-    
-    /**
-     * Processes the {@link Map} for the {@link Project}'s version check files.
-     * 
-     * @param data
-     *            the original {@link Map} constructed from the original JSON
-     *            file.
-     * @return the processed {@link Map}.
-     * @throws IOException
-     * @throws DerpException
-     */
-    private Map<String, Object> processMaps(Map<String, Object> data) throws IOException, DerpException
-    {
-        StringBuilder builder = new StringBuilder();
-        
-        if (isMinecraftMod)
-        {
-            builder.append(minecraftVersion);
-        }
-        else
-        {
-            builder.append("version");
-        }
-        
-        String s = builder.toString();
-        
-        data.put(s, versionNumber);
-        
-        return data;
     }
     
     /**
@@ -830,7 +815,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param name
      *            the dependency name.
      */
@@ -851,7 +836,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param dependency
      *            the dependency.
      */
@@ -862,7 +847,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param version
@@ -875,7 +860,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param dependency
      *            the dependency.
      * @param version
@@ -888,7 +873,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param group
      *            the dependency group.
      * @param name
@@ -903,7 +888,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param dependency
      *            the dependency.
      */
@@ -914,7 +899,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param project
      *            the {@link Project}.
      * @param group
@@ -931,7 +916,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a dependency to the {@link Project}.
-     * 
+     *
      * @param project
      *            the {@link Project}.
      * @param dependency
@@ -954,7 +939,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers a Celestibytes {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param version
@@ -969,7 +954,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers a Scala {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param artifact
@@ -984,7 +969,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers a Scala {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param artifact
@@ -1013,7 +998,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers an Apache Commons {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param artifact
@@ -1043,7 +1028,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers an Apache Commons {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param artifact
@@ -1073,7 +1058,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers an Apache HTTP {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param aliases
@@ -1086,7 +1071,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers an Apache HTTP {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param version
@@ -1114,7 +1099,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers an Apache Log4J {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param aliases
@@ -1139,7 +1124,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers a {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param group
@@ -1156,7 +1141,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Registers a {@link Dependency}.
-     * 
+     *
      * @param name
      *            the dependency name.
      * @param group
@@ -1293,8 +1278,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
-     * Makes a {@link DefaultTask}. 
-     * @param name the name.
+     * Makes a {@link DefaultTask}.
+     * 
+     * @param name
+     *            the name.
      * @return the {@link DefaultTask}.
      */
     public DefaultTask makeTask(String name)
@@ -1303,9 +1290,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
-     * Makes a {@link Task}. 
-     * @param name the name.
-     * @param type the type.
+     * Makes a {@link Task}.
+     * 
+     * @param name
+     *            the name.
+     * @param type
+     *            the type.
      * @return the {@link Task}.
      */
     public <T extends Task> T makeTask(String name, Class<T> type)
@@ -1314,10 +1304,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
-     * Makes a {@link Task}. 
-     * @param project the {@link Project}.
-     * @param name the name.
-     * @param type the type.
+     * Makes a {@link Task}.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param name
+     *            the name.
+     * @param type
+     *            the type.
      * @return the {@link Task}.
      */
     @SuppressWarnings("unchecked")
@@ -1329,11 +1323,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return (T) project.task(map, name);
     }
     
-    
     /**
      * Invokes an ant task.
-     * @param task the task.
-     * @param args the arguments.
+     * 
+     * @param task
+     *            the task.
+     * @param args
+     *            the arguments.
      */
     public void invokeAnt(String task, Map<String, String> args)
     {
@@ -1342,9 +1338,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Invokes an ant task.
-     * @param project the {@link Project}.
-     * @param task the task.
-     * @param args the arguments.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param task
+     *            the task.
+     * @param args
+     *            the arguments.
      */
     public static void invokeAnt(Project project, String task, Map<String, String> args)
     {
@@ -1353,7 +1353,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Applies an external {@link Plugin} to the {@link Project}.
-     * @param plugin the {@link Plugin}.
+     * 
+     * @param plugin
+     *            the {@link Plugin}.
      */
     public void applyExternalPlugin(String plugin)
     {
@@ -1364,9 +1366,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a Maven repository to the {@link Project}.
-     * @param project the {@link Project}
-     * @param name the name.
-     * @param url the url.
+     * 
+     * @param project
+     *            the {@link Project}
+     * @param name
+     *            the name.
+     * @param url
+     *            the url.
      * @return the {@link MavenArtifactRepository}.
      */
     public static MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
@@ -1384,9 +1390,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Adds a flat file repository to the {@link Project}.
-     * @param project the {@link Project}
-     * @param name the name.
-     * @param dirs the directories.
+     * 
+     * @param project
+     *            the {@link Project}
+     * @param name
+     *            the name.
+     * @param dirs
+     *            the directories.
      * @return the {@link FlatDirectoryArtifactRepository}.
      */
     public static FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
@@ -1404,7 +1414,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Creates a new {@link DelayedString}.
-     * @param path the path.
+     * 
+     * @param path
+     *            the path.
      * @return the {@link DelayedString}.
      */
     protected DelayedString delayedString(String path)
@@ -1414,7 +1426,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Creates a new {@link DelayedFile}.
-     * @param path the path.
+     * 
+     * @param path
+     *            the path.
      * @return the {@link DelayedFile}.
      */
     protected DelayedFile delayedFile(String path)
@@ -1424,7 +1438,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Creates a new {@link DelayedFileTree}.
-     * @param path the path.
+     * 
+     * @param path
+     *            the path.
      * @return the {@link DelayedFileTree}.
      */
     protected DelayedFileTree delayedFileTree(String path)
@@ -1434,7 +1450,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Creates a new {@link DelayedFileTree}.
-     * @param path the path.
+     * 
+     * @param path
+     *            the path.
      * @return the {@link DelayedFileTree}.
      */
     protected DelayedFileTree delayedZipTree(String path)
@@ -1442,6 +1460,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return new DelayedFileTree(project, path, true, this);
     }
     
+    /**
+     * Resolves a pattern.
+     */
     @Override
     public String resolve(String pattern, Project project, BaseExtension extension)
     {
@@ -1451,35 +1472,81 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return pattern;
     }
     
+    /**
+     * Gets a property from CelestialWizardry's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getCWVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
         return getProperty(project, "src/main/" + s + "/celestibytes/celestialwizardry/reference/Versions.java", field);
     }
     
+    /**
+     * Gets a property from Doughcraft's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getDgCVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
         return getProperty(project, "src/main/" + s + "/pizzana/doughcraft/reference/Versions.java", field);
     }
     
+    /**
+     * Gets a property from CelestiGradle's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getCGVersion(Project project, String field) throws IOException
     {
         return getProperty(project, "src/main/java/celestibytes/gradle/reference/Versions.java", field);
     }
     
+    /**
+     * Gets a property from CelestiCore's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getCoreVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
         return getProperty(project, "src/main/" + s + "/celestibytes/core/reference/Versions.java", field);
     }
     
-    public static String getTTVersion(Project project, String field) throws IOException
-    {
-        // String s = scala ? "scala" : "java";
-        return getProperty(project, "src/celestibytes/tankytanks/reference/Versions.java", field);
-    }
-    
+    /**
+     * Gets a property from a Scala or Java source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param file
+     *            the relative file.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     @SuppressWarnings("unchecked")
     public static String getProperty(Project project, String file, String field) throws IOException
     {
@@ -1504,27 +1571,74 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return property;
     }
     
+    /**
+     * Sets the {@link Project}'s version number.
+     * 
+     * @param version
+     *            the version number.
+     * @return the version number.
+     */
     public static String versionNumber(String version)
     {
         return setVersionNumber(version);
     }
     
+    /**
+     * Sets the {@link Project}'s version number.
+     * 
+     * @param version
+     *            the version number.
+     * @return the version number.
+     */
     public static String setVersionNumber(String version)
     {
         versionNumber = version;
         return versionNumber;
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @return the Minecraft version.
+     */
+    public static String mc()
+    {
+        return setMc();
+    }
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @param version
+     *            the Minecraft version.
+     * @return the Minecraft version.
+     */
     public static String mc(String version)
     {
         return setMc(version);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @return the Minecraft version.
+     */
     public static String setMc()
     {
         return setMc(Versions.DEFAULT_MINECRAFT_VERSION);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @param version
+     *            the Minecraft version.
+     * @return the Minecraft version.
+     */
     public static String setMc(String version)
     {
         isMinecraftMod = true;
@@ -1532,11 +1646,27 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return version;
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * CelestiCore.
+     * 
+     * @param version
+     *            the CelestiCore version.
+     * @return the CelestiCore version.
+     */
     public static String core(String version)
     {
         return setCore(version);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * CelestiCore.
+     * 
+     * @param version
+     *            the CelestiCore version.
+     * @return the CelestiCore version.
+     */
     public static String setCore(String version)
     {
         needsCore = true;
@@ -1544,11 +1674,25 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return version;
     }
     
+    /**
+     * Sets the base package for this {@link Project}.
+     * 
+     * @param s
+     *            the base package.
+     * @return the base package.
+     */
     public static String basePackage(String s)
     {
         return setBasePackage(s);
     }
     
+    /**
+     * Sets the base package for this {@link Project}.
+     * 
+     * @param s
+     *            the base package.
+     * @return the base package.
+     */
     public static String setBasePackage(String s)
     {
         basePackage = s;
@@ -1556,34 +1700,76 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return s;
     }
     
+    /**
+     * Sets the artifacts {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the artifacts {@link List}.
+     * @return the artifacts {@link List}.
+     */
     public static List<String> artifactsList(List<String> list)
     {
         return setArtifactsList(list);
     }
     
+    /**
+     * Sets the artifacts {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the artifacts {@link List}.
+     * @return the artifacts {@link List}.
+     */
     public static List<String> setArtifactsList(List<String> list)
     {
         artifactsList = list;
         return list;
     }
     
+    /**
+     * Adds an artifact to the artifacts {@link List} of this {@link Project}.
+     * 
+     * @param s
+     *            the artifact.
+     * @return the artifact.
+     */
     public static String artifact(String s)
     {
         return setArtifact(s);
     }
     
+    /**
+     * Adds an artifact to the artifacts {@link List} of this {@link Project}.
+     * 
+     * @param s
+     *            the artifact.
+     * @return the artifact.
+     */
     public static String setArtifact(String s)
     {
         artifactsList.add(s);
         return s;
     }
     
+    /**
+     * Sets a custom manifest to this {@link Project}.
+     * 
+     * @param c
+     *            the manifest.
+     * @return the manifest.
+     */
     @SuppressWarnings("rawtypes")
     public static Closure manifest(Closure c)
     {
         return setManifest(c);
     }
     
+    /**
+     * Sets a custom manifest to this {@link Project}.
+     * 
+     * @param c
+     *            the manifest.
+     * @return the manifest.
+     */
     @SuppressWarnings("rawtypes")
     public static Closure setManifest(Closure c)
     {
@@ -1592,43 +1778,83 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return c;
     }
     
-    public static String versionCheck(Project p)
-    {
-        return setVersionCheck(p);
-    }
-    
+    /**
+     * Enables the version check feature for this {@link Project}.
+     * 
+     * @param p
+     *            the version check url.
+     * @return the version check id.
+     */
     public static String versionCheck(String id)
     {
         return setVersionCheck(id);
     }
     
-    public static String setVersionCheck(Project p)
-    {
-        return setVersionCheck(p.getName().toLowerCase());
-    }
-    
+    /**
+     * Enables the version check feature for this {@link Project}.
+     * 
+     * @param p
+     *            the version check url.
+     * @return the version check id.
+     */
     public static String setVersionCheck(String id)
     {
-        versionCheckId = id;
+        versionCheckUrl = id;
         hasVersionCheck = true;
         return id;
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @return the Baubles version.
+     */
     public static String baubles(String s)
     {
         return setBaubles(s);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @param mc
+     *            the Baubles Minecraft version.
+     * @return the Baubles version.
+     */
     public static String baubles(String s, String mc)
     {
         return setBaubles(s, mc);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @return the Baubles version.
+     */
     public static String setBaubles(String s)
     {
         return setBaubles(s, minecraftVersion);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @param mc
+     *            the Baubles Minecraft version.
+     * @return the Baubles version.
+     */
     public static String setBaubles(String s, String mc)
     {
         baublesVersion = s;
@@ -1637,65 +1863,147 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return s;
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean scala()
     {
         return scala(true);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean setScala()
     {
         return setScala(true);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @param b
+     *            is Scala enabled.
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean scala(boolean b)
     {
         return setScala(b);
     }
     
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @param b
+     *            is Scala enabled.
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean setScala(boolean b)
     {
         scala = b;
         return b;
     }
     
-    public static List<String> libsList(List<String> list)
+    /**
+     * Sets the dependencies {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the dependencies {@link List}.
+     * @return the dependencies {@link List}.
+     */
+    public static List<String> depsList(List<String> list)
     {
-        return setLibsList(list);
+        return setDepsList(list);
     }
     
-    public static List<String> setLibsList(List<String> list)
+    /**
+     * Sets the dependencies {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the dependencies {@link List}.
+     * @return the dependencies {@link List}.
+     */
+    public static List<String> setDepsList(List<String> list)
     {
         deps = list;
         return list;
     }
     
-    public static String lib(String s)
+    /**
+     * Adds an dependency to the dependencies {@link List} of this
+     * {@link Project}.
+     * 
+     * @param s
+     *            the dependency.
+     * @return the dependency.
+     */
+    public static String dep(String s)
     {
-        return setLib(s);
+        return setDep(s);
     }
     
-    public static String setLib(String s)
+    /**
+     * Adds an dependency to the dependencies {@link List} of this
+     * {@link Project}.
+     * 
+     * @param s
+     *            the dependency.
+     * @return the dependency.
+     */
+    public static String setDep(String s)
     {
         deps.add(s);
         return s;
     }
     
-    public static String libsFile()
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @return the relative file.
+     */
+    public static String depsFile()
     {
-        return setLibsFile(Reference.DEFAULT_DEPS_FILE);
+        return setDepsFile(Reference.DEFAULT_DEPS_FILE);
     }
     
-    public static String setLibsFile()
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @return the relative file.
+     */
+    public static String setDepsFile()
     {
-        return setLibsFile(Reference.DEFAULT_DEPS_FILE);
+        return setDepsFile(Reference.DEFAULT_DEPS_FILE);
     }
     
-    public static String libsFile(String s)
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @param s
+     *            the relative file.
+     * @return the relative file.
+     */
+    public static String depsFile(String s)
     {
-        return setLibsFile(s);
+        return setDepsFile(s);
     }
     
-    public static String setLibsFile(String s)
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @param s
+     *            the relative file.
+     * @return the relative file.
+     */
+    public static String setDepsFile(String s)
     {
         depsFile = s;
         useDepsFile = true;

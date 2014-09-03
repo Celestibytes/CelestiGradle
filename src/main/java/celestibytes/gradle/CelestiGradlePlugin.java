@@ -254,37 +254,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
     @SuppressWarnings("unchecked")
     private void addDependencies()
-    {
-        if (useLibsFile)
-        {
-            try
-            {
-                List<String> lines = FileUtils.readLines(project.file(libsFile));
-                
-                for (String line : lines)
-                {
-                    line = line.trim();
-                    
-                    addDependency(line.trim());
-                }
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-        
-        if (needsCore)
-        {
-            addDependency(delayedString("{CORE_DEV_ARTIFACT}").call());
-        }
-
+    {        
         if (!fg)
         {
             addDependency(project.fileTree("libs"));
         }
 
-        registerCelestiDep("CelestiCore", "");
+        registerCelestiDep("CelestiCore", "0.5.0");
 
         registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");
@@ -333,15 +309,57 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 
         registerLog4j("core");
         registerLog4j("api");
+        
+        if (needsCore)
+        {
+            addDependency("CelestiCore", coreVersion);
+        }
+        
+        if (useLibsFile)
+        {
+            try
+            {
+                List<String> lines = FileUtils.readLines(project.file(libsFile));
+                
+                for (String line : lines)
+                {
+                    line = line.trim();
+                    
+                    if (line.contains(":"))
+                    {
+                        String[] array = line.split(":");
+                        addDependency(array[0], array[1]);
+                    }
+                    else
+                    {
+                        addDependency(line);
+                    }
+                }
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
 
         if (scala)
         {
-            // TODO Automatically add scala deps
+            addDependency("scala");
         }
         
         for (String s : libs)
         {
-            addDependency(s);
+            s = s.trim();
+            
+            if (s.contains(":"))
+            {
+                String[] array = s.split(":");
+                addDependency(array[0], array[1]);
+            }
+            else
+            {
+                addDependency(s);
+            }
         }
     }
 
@@ -732,6 +750,32 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         FileUtils.writeStringToFile(file, new Gson().toJson(data));
         return file;
+    }
+    
+    private void addDependency(String name)
+    {
+        if (knownAliases.containsKey(name))
+        {
+            for (String s : knownAliases.get(name))
+            {
+                addDependency(knownDeps.get(s));
+            }
+        }
+    }
+    
+    private void addDependency(Dependency dependency)
+    {
+        addDependency(dependency.getGroup(), dependency.getArtifact(), dependency.getVersion());
+    }
+    
+    private void addDependency(String name, String version)
+    {
+        addDependency(knownDeps.get(name), version);
+    }
+    
+    private void addDependency(Dependency dependency, String version)
+    {
+        addDependency(dependency.getGroup(), dependency.getArtifact(), version);
     }
 
     private void addDependency(String group, String name, String version)

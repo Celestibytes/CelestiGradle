@@ -1292,35 +1292,69 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
+    /**
+     * Makes a {@link DefaultTask}. 
+     * @param name the name.
+     * @return the {@link DefaultTask}.
+     */
     public DefaultTask makeTask(String name)
     {
         return makeTask(name, DefaultTask.class);
     }
     
+    /**
+     * Makes a {@link Task}. 
+     * @param name the name.
+     * @param type the type.
+     * @return the {@link Task}.
+     */
     public <T extends Task> T makeTask(String name, Class<T> type)
     {
         return makeTask(project, name, type);
     }
     
+    /**
+     * Makes a {@link Task}. 
+     * @param project the {@link Project}.
+     * @param name the name.
+     * @param type the type.
+     * @return the {@link Task}.
+     */
     @SuppressWarnings("unchecked")
-    private static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
+    private static <T extends Task> T makeTask(Project project, String name, Class<T> type)
     {
         HashMap<String, Object> map = new HashMap<String, Object>();
         map.put("name", name);
         map.put("type", type);
-        return (T) proj.task(map, name);
+        return (T) project.task(map, name);
     }
     
+    
+    /**
+     * Invokes an ant task.
+     * @param task the task.
+     * @param args the arguments.
+     */
     public void invokeAnt(String task, Map<String, String> args)
     {
         invokeAnt(project, task, args);
     }
     
+    /**
+     * Invokes an ant task.
+     * @param project the {@link Project}.
+     * @param task the task.
+     * @param args the arguments.
+     */
     public static void invokeAnt(Project project, String task, Map<String, String> args)
     {
         project.getAnt().invokeMethod(task, args);
     }
     
+    /**
+     * Applies an external {@link Plugin} to the {@link Project}.
+     * @param plugin the {@link Plugin}.
+     */
     public void applyExternalPlugin(String plugin)
     {
         HashMap<String, Object> map = new HashMap<String, Object>();
@@ -1328,6 +1362,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.apply(map);
     }
     
+    /**
+     * Adds a Maven repository to the {@link Project}.
+     * @param project the {@link Project}
+     * @param name the name.
+     * @param url the url.
+     * @return the {@link MavenArtifactRepository}.
+     */
     public static MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
     {
         return project.getRepositories().maven(new Action<MavenArtifactRepository>()
@@ -1341,6 +1382,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         });
     }
     
+    /**
+     * Adds a flat file repository to the {@link Project}.
+     * @param project the {@link Project}
+     * @param name the name.
+     * @param dirs the directories.
+     * @return the {@link FlatDirectoryArtifactRepository}.
+     */
     public static FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
     {
         return project.getRepositories().flatDir(new Action<FlatDirectoryArtifactRepository>()
@@ -1354,21 +1402,41 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         });
     }
     
+    /**
+     * Creates a new {@link DelayedString}.
+     * @param path the path.
+     * @return the {@link DelayedString}.
+     */
     protected DelayedString delayedString(String path)
     {
         return new DelayedString(project, path, this);
     }
     
+    /**
+     * Creates a new {@link DelayedFile}.
+     * @param path the path.
+     * @return the {@link DelayedFile}.
+     */
     protected DelayedFile delayedFile(String path)
     {
         return new DelayedFile(project, path, this);
     }
     
+    /**
+     * Creates a new {@link DelayedFileTree}.
+     * @param path the path.
+     * @return the {@link DelayedFileTree}.
+     */
     protected DelayedFileTree delayedFileTree(String path)
     {
         return new DelayedFileTree(project, path, this);
     }
     
+    /**
+     * Creates a new {@link DelayedFileTree}.
+     * @param path the path.
+     * @return the {@link DelayedFileTree}.
+     */
     protected DelayedFileTree delayedZipTree(String path)
     {
         return new DelayedFileTree(project, path, true, this);

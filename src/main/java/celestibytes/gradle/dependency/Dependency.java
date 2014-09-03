@@ -26,6 +26,11 @@ public final class Dependency
     private final String version;
     private final List<String> aliases;
     
+    public Dependency(String group, String artifact, String version, String... aliases)
+    {
+        this(artifact, group, artifact, version, aliases);
+    }
+    
     public Dependency(String name, String group, String artifact, String version, String... aliases)
     {
         this.name = name;

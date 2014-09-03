@@ -76,7 +76,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * A {@code static} instance of the {@link Project}.
      */
     private static Project projectStatic;
-
+    
     /**
      * A {@code boolean} that tells if CelestiGradle should initialize
      * ForgeGradle.
@@ -92,18 +92,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * A {@code boolean} that tells if the project is a Minecraft mod.
      */
     private static boolean isMinecraftMod = false;
-
+    
     /**
      * The Minecraft's version number. Only needed if the project is a Minecraft
      * mod.
      */
     private static String minecraftVersion;
-
+    
     /**
      * A {@code boolean} that tells if the project needs CelestiCore.
      */
     private static boolean needsCore = false;
-
+    
     /**
      * The CelestiCore version number. Only needed if the project needs
      * CelestiCore.
@@ -114,7 +114,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The base package of the project. Used for packaging project archives.
      */
     private static String basePackage;
-
+    
     /**
      * The base directory of the project. Used for packaging project archives.
      */
@@ -130,7 +130,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      */
     @SuppressWarnings("rawtypes")
     private static Closure manifest;
-
+    
     /**
      * A {@code boolean} that tells if the project has custom manifest.
      */
@@ -140,7 +140,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The id used to create remote version check files for the project.
      */
     private static String versionCheckId;
-
+    
     /**
      * A {@code boolean} that tells if the project has a remote version check.
      */
@@ -150,13 +150,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The Baubles version number. Only needed if the project needs Baubles.
      */
     private static String baublesVersion;
-
+    
     /**
      * The Baubles Minecraft version number. Only needed if the project needs
      * Baubles.
      */
     private static String baublesMinecraft;
-
+    
     /**
      * A {@code boolean} that tells if the project needs Baubles.
      */
@@ -172,19 +172,19 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * script.
      */
     private static List<String> deps = Lists.newArrayList();
-
+    
     /**
      * The relative path to the dependencies file. Only needed if the project
      * uses the feature.
      */
     private static String depsFile;
-
+    
     /**
-     * A {@code boolean} that tells if the project uses the external dependencies
-     * file feature.
+     * A {@code boolean} that tells if the project uses the external
+     * dependencies file feature.
      */
     private static boolean useDepsFile = false;
-
+    
     /**
      * The {@link List} of dependencies already added to this project through
      * the {@link CelestiGradlePlugin}.
@@ -223,7 +223,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     /**
      * Apply this plugin to the given target object.
      * 
-     * @param target the target object.
+     * @param target
+     *            the target object.
      */
     @Override
     public void apply(Project target)
@@ -259,6 +260,25 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         makeLifecycleTasks();
     }
     
+    /**
+     * Adds required maven repositories to the {@link Project}.
+     */
+    private void addRepositories()
+    {
+        project.allprojects(new Action<Project>()
+        {
+            @Override
+            public void execute(Project project)
+            {
+                addMavenRepo(project, "cbts", Reference.MAVEN);
+                project.getRepositories().mavenCentral();
+            }
+        });
+    }
+    
+    /**
+     * Checks that all properties of the {@link Project} are set correctly and also initializes some properties.
+     */
     private void resolveProperties()
     {
         if (versionNumber == null)
@@ -300,6 +320,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         isStable = Version.parse(versionNumber).isStable();
     }
     
+    /**
+     * Applies required external and internal {@link Plugin}s to the {@link Project}.
+     */
     private void applyPlugins()
     {
         if (!fg)
@@ -327,19 +350,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
-    private void addRepositories()
-    {
-        project.allprojects(new Action<Project>()
-                {
-            @Override
-            public void execute(Project project)
-            {
-                addMavenRepo(project, "cbts", Reference.MAVEN);
-                project.getRepositories().mavenCentral();
-            }
-                });
-    }
-    
+    /**
+     * Registers a list of dependecies to this {@link Plugin} and adds required dependencies to the {@link Project}.
+     */
     @SuppressWarnings("unchecked")
     private void addDependencies()
     {
@@ -397,22 +410,22 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         registerLog4j("core");
         registerLog4j("api");
-
+        
         if (needsCore)
         {
             addDependency("CelestiCore", coreVersion);
         }
-
+        
         if (useDepsFile)
         {
             try
             {
                 List<String> lines = FileUtils.readLines(project.file(depsFile));
-
+                
                 for (String line : lines)
                 {
                     line = line.trim();
-
+                    
                     if (line.contains(":"))
                     {
                         String[] array = line.split(":");
@@ -434,11 +447,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             addDependency("scala");
         }
-
+        
         for (String s : deps)
         {
             s = s.trim();
-
+            
             if (s.contains(":"))
             {
                 String[] array = s.split(":");
@@ -736,7 +749,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     
                     Map<String, Object> data = new Gson().fromJson(json, Map.class);
                     
-                    // TODO Think about alternative solutions for the version check location
+                    // TODO Think about alternative solutions for the version
+                    // check location
                     Map<String, String> args = newHashMap();
                     args.put("file", "./" + versionCheckId + ".json");
                     invokeAnt("delete", args);
@@ -797,7 +811,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         FileUtils.writeStringToFile(file, new Gson().toJson(data));
         return file;
     }
-
+    
     private void addDependency(String name)
     {
         if (knownAliases.containsKey(name))
@@ -807,18 +821,22 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 addDependency(knownDeps.get(s));
             }
         }
+        else
+        {
+            addDependency(new Dependency(name.split(":")[0], name.split(":")[1], name.split(":")[2]));
+        }
     }
-
+    
     private void addDependency(Dependency dependency)
     {
         addDependency(dependency.getGroup(), dependency.getArtifact(), dependency.getVersion());
     }
-
+    
     private void addDependency(String name, String version)
     {
         addDependency(knownDeps.get(name), version);
     }
-
+    
     private void addDependency(Dependency dependency, String version)
     {
         addDependency(dependency.getGroup(), dependency.getArtifact(), version);
@@ -845,9 +863,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             return;
         }
-
+        
         project.getDependencies().add("compile", dependency);
-
+        
         if (dependency instanceof String)
         {
             addedLibs.add((String) dependency);
@@ -1038,15 +1056,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             URLConnection urlConnection = new URL(Reference.VERSION_CHECK_URL).openConnection();
             urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
             urlConnection.connect();
-
+            
             InputStream inputStream = urlConnection.getInputStream();
-
+            
             String data = new String(ByteStreams.toByteArray(inputStream));
-
+            
             inputStream.close();
-
+            
             Version remote = Version.parse(data);
-
+            
             if (Version.parse(Versions.VERSION).compareTo(remote) < 0)
             {
                 projectStatic.getLogger().lifecycle("****************************");
@@ -1062,7 +1080,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         {
             e.printStackTrace();
         }
-
+        
         projectStatic.getLogger().lifecycle("****************************");
         projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
         projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);
@@ -1330,7 +1348,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         return setVersionCheck(id);
     }
-
+    
     public static String setVersionCheck(Project p)
     {
         return setVersionCheck(p.getName().toLowerCase());
@@ -1408,22 +1426,22 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         deps.add(s);
         return s;
     }
-
+    
     public static String libsFile()
     {
         return setLibsFile(Reference.DEFAULT_DEPS_FILE);
     }
-
+    
     public static String setLibsFile()
     {
         return setLibsFile(Reference.DEFAULT_DEPS_FILE);
     }
-
+    
     public static String libsFile(String s)
     {
         return setLibsFile(s);
     }
-
+    
     public static String setLibsFile(String s)
     {
         depsFile = s;

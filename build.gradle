@@ -14,7 +14,7 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 group = 'io.github.celestibytes'
-version = "2.4.1"
+version = "2.4.2"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
@@ -26,10 +26,12 @@ repositories {
         url = "http://files.minecraftforge.net/maven"
     }
     maven {
+        // because Srg2Source needs an eclipse dependency.
         name = "eclipse"
         url = "https://repo.eclipse.org/content/groups/eclipse/"
     }
     maven {
+        // because SpecialSource doesnt have a full release
         name = "sonatype"
         url = "https://oss.sonatype.org/content/repositories/snapshots/"
     }
@@ -161,6 +163,13 @@ uploadArchives {
                         url 'https://github.com/Celestibytes/CelestiGradle/issues'
                     }
 
+					licenses {
+                        license {
+                            name 'GNU GENERAL PUBLIC LICENSE v2'
+                            url 'http://www.gnu.org/licenses/gpl-2.0.html'
+                        }
+                    }
+                    
                     developers {
                         developer {
                             id 'PizzAna'

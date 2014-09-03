@@ -257,6 +257,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         makePackageTasks();
         makeSignTask();
+        makeJsonTask();
         makeLifecycleTasks();
     }
     
@@ -277,7 +278,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
-     * Checks that all properties of the {@link Project} are set correctly and also initializes some properties.
+     * Checks that all properties of the {@link Project} are set correctly and
+     * also initializes some properties.
      */
     private void resolveProperties()
     {
@@ -321,7 +323,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
-     * Applies required external and internal {@link Plugin}s to the {@link Project}.
+     * Applies required external and internal {@link Plugin}s to the
+     * {@link Project}.
      */
     private void applyPlugins()
     {
@@ -351,7 +354,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
-     * Registers a list of dependecies to this {@link Plugin} and adds required dependencies to the {@link Project}.
+     * Registers a list of dependecies to this {@link Plugin} and adds required
+     * dependencies to the {@link Project}.
      */
     @SuppressWarnings("unchecked")
     private void addDependencies()
@@ -464,6 +468,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
+    /**
+     * Makes the tasks for setting up the Baubles dependency.
+     */
     private void makeBaublesTask()
     {
         String baublesFile = "Baubles-deobf-" + baublesMinecraft + "-" + baublesVersion + ".jar";
@@ -542,6 +549,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
     }
     
+    /**
+     * Makes the tasks for building the {@link Project} archives.
+     */
     private void makePackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
@@ -671,6 +681,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
+    /**
+     * Makes the task for signing the {@link Project} archives.
+     */
     private void makeSignTask()
     {
         DefaultTask signJar = makeTask("signJar");
@@ -717,7 +730,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
     
-    private void makeLifecycleTasks()
+    /**
+     * Makes the task for processing the {@link Project}'s version check files.
+     */
+    private void makeJsonTask()
     {
         DefaultTask processJson = makeTask("processJson");
         processJson.onlyIf(new Spec<Task>()
@@ -751,11 +767,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     
                     // TODO Think about alternative solutions for the version
                     // check location
-                    Map<String, String> args = newHashMap();
+                    Map<String, String> args = Maps.newHashMap();
                     args.put("file", "./" + versionCheckId + ".json");
                     invokeAnt("delete", args);
                     
-                    writeJsonToFile(project.file("./" + versionCheckId + ".json"), processMaps(data));
+                    FileUtils.writeStringToFile(project.file("./" + versionCheckId + ".json"),
+                            new Gson().toJson(processMaps(data)));
                 }
                 catch (IOException e)
                 {
@@ -768,13 +785,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             }
         });
         processJson.dependsOn("uploadArchives");
-        
-        DefaultTask release = makeTask("release");
-        release.setDescription("Wrapper task for building release-ready archives.");
-        release.setGroup(Reference.NAME);
-        release.dependsOn(processJson);
     }
     
+    /**
+     * Processes the {@link Map} for the {@link Project}'s version check files.
+     * 
+     * @param data
+     *            the original {@link Map} constructed from the original JSON
+     *            file.
+     * @return the processed {@link Map}.
+     * @throws IOException
+     * @throws DerpException
+     */
     private Map<String, Object> processMaps(Map<String, Object> data) throws IOException, DerpException
     {
         StringBuilder builder = new StringBuilder();
@@ -795,23 +817,23 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         return data;
     }
     
-    @SuppressWarnings("unused")
-    private static <K, V> Map<K, V> newMap()
+    /**
+     * Makes the tasks related to build's lifecycle.
+     */
+    private void makeLifecycleTasks()
     {
-        return new HashMap<K, V>();
+        DefaultTask release = makeTask("release");
+        release.setDescription("Wrapper task for building release-ready archives.");
+        release.setGroup(Reference.NAME);
+        release.dependsOn("processJson");
     }
     
-    private static <K, V> Map<K, V> newHashMap()
-    {
-        return Maps.newHashMap();
-    }
-    
-    private static File writeJsonToFile(File file, Map<String, Object> data) throws IOException
-    {
-        FileUtils.writeStringToFile(file, new Gson().toJson(data));
-        return file;
-    }
-    
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param name
+     *            the dependency name.
+     */
     private void addDependency(String name)
     {
         if (knownAliases.containsKey(name))
@@ -827,36 +849,94 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param dependency
+     *            the dependency.
+     */
     private void addDependency(Dependency dependency)
     {
         addDependency(dependency.getGroup(), dependency.getArtifact(), dependency.getVersion());
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     */
     private void addDependency(String name, String version)
     {
         addDependency(knownDeps.get(name), version);
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param dependency
+     *            the dependency.
+     * @param version
+     *            the dependency version.
+     */
     private void addDependency(Dependency dependency, String version)
     {
         addDependency(dependency.getGroup(), dependency.getArtifact(), version);
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param group
+     *            the dependency group.
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     */
     private void addDependency(String group, String name, String version)
     {
         addDependency(project, group, name, version);
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param dependency
+     *            the dependency.
+     */
     private void addDependency(Object dependency)
     {
         addDependency(project, dependency);
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param group
+     *            the dependency group.
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     */
     public static void addDependency(Project project, String group, String name, String version)
     {
         addDependency(project, group + ":" + name + ":" + version);
     }
     
+    /**
+     * Adds a dependency to the {@link Project}.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param dependency
+     *            the dependency.
+     */
     public static void addDependency(Project project, Object dependency)
     {
         if (dependency instanceof String && addedLibs.contains(dependency))
@@ -872,22 +952,48 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
-    /*
-     * private void registerDep(String name, String group, String artifact,
-     * String version, String... aliases) { registerDep(project, name, group,
-     * artifact, version, aliases); }
+    /**
+     * Registers a Celestibytes {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
      */
-    
     public static void registerCelestiDep(String name, String version, String... aliases)
     {
         registerDep(name, "io.github.celestibytes", name, version, aliases);
     }
     
+    /**
+     * Registers a Scala {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerScala2(String name, String artifact, String... aliases)
     {
         registerScala(name, artifact, "2.11.2", aliases);
     }
     
+    /**
+     * Registers a Scala {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerScala(String name, String artifact, String version, String... aliases)
     {
         String[] array = new String[aliases.length + 1];
@@ -905,6 +1011,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("scala-" + name, "org.scala-lang", "scala-" + artifact, version, array);
     }
     
+    /**
+     * Registers an Apache Commons {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerCommons(String name, String artifact, String version, String... aliases)
     {
         String[] array = new String[aliases.length + 2];
@@ -923,6 +1041,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("commons-" + name, "org.apache.commons", "commons-" + artifact, version, array);
     }
     
+    /**
+     * Registers an Apache Commons {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerCommons2(String name, String artifact, String version, String... aliases)
     {
         String[] array = new String[aliases.length + 2];
@@ -941,11 +1071,29 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("commons-" + name, "commons-" + name, "commons-" + artifact, version, array);
     }
     
+    /**
+     * Registers an Apache HTTP {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerHttp2(String name, String... aliases)
     {
         registerHttp(name, "4.3.5", aliases);
     }
     
+    /**
+     * Registers an Apache HTTP {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerHttp(String name, String version, String... aliases)
     {
         String[] array = new String[aliases.length + 2];
@@ -964,6 +1112,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("http" + name, "org.apache.httpcomponents", "http" + name, version, array);
     }
     
+    /**
+     * Registers an Apache Log4J {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerLog4j(String name, String... aliases)
     {
         String[] array = new String[aliases.length + 1];
@@ -981,11 +1137,37 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         registerDep("log4j-" + name, "org.apache.logging.log4j", "log4j-" + name, "2.0.2", array);
     }
     
+    /**
+     * Registers a {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param group
+     *            the dependency group.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerDep2(String name, String group, String version, String... aliases)
     {
         registerDep(name, group, name, version, aliases);
     }
     
+    /**
+     * Registers a {@link Dependency}.
+     * 
+     * @param name
+     *            the dependency name.
+     * @param group
+     *            the dependency group.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
     public static void registerDep(String name, String group, String artifact, String version, String... aliases)
     {
         if (knownDeps.containsKey(name))
@@ -1049,6 +1231,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
+    /**
+     * Displays the banner in the beginning of the build.
+     */
     public static void displayBanner()
     {
         try

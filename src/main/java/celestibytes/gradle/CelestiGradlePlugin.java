@@ -365,6 +365,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         
         registerCelestiDep("CelestiCore", "0.5.0");
+        registerCelestiDep("CelestiLib", "0.1.0");
         
         registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");

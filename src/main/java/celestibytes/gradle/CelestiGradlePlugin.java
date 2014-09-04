@@ -37,7 +37,6 @@ import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.google.gson.Gson;
 
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;

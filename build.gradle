@@ -28,7 +28,7 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 group = 'io.github.celestibytes'
-version = "3.0.1"
+version = "3.0.2"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'
@@ -102,7 +102,7 @@ dependencies {
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // CelestiLib
-    compile 'io.github.celestibytes:CelestiLib:0.1.0'
+    // compile 'io.github.celestibytes:CelestiLib:0.1.3'
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"

@@ -1224,6 +1224,41 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      */
     public static void displayBanner()
     {        
+        try
+        {
+            URLConnection urlConnection = new URL(Reference.VERSION_CHECK_URL).openConnection();
+            urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
+            urlConnection.connect();
+            
+            InputStream inputStream = urlConnection.getInputStream();
+            
+            String data = new String(ByteStreams.toByteArray(inputStream));
+            
+            inputStream.close();
+            
+            Version remote = Version.parse(data);
+            
+            if (Version.parse(Versions.VERSION).compareTo(remote) < 0)
+            {
+                projectStatic.getLogger().lifecycle("****************************");
+                projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available:");
+                projectStatic.getLogger().lifecycle(" " + data);
+            }
+            else
+            {
+                projectStatic.getLogger().lifecycle("****************************");
+                projectStatic.getLogger().lifecycle(" " + Reference.NAME_FULL + " is up to date!");
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        
         projectStatic.getLogger().lifecycle("****************************");
         projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
         projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);

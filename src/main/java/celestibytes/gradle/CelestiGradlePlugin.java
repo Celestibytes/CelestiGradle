@@ -429,6 +429,11 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 {
                     line = line.trim();
                     
+                    if (line.equals("") || line == null)
+                    {
+                        continue;
+                    }
+                    
                     if (line.contains(":"))
                     {
                         String[] array = line.split(":");

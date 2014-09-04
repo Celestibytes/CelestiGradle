@@ -1242,8 +1242,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             if (Version.parse(Versions.VERSION).compareTo(remote) < 0)
             {
                 projectStatic.getLogger().lifecycle("****************************");
-                projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available");
+                projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available:");
                 projectStatic.getLogger().lifecycle(" " + data);
+            }
+            else
+            {
+                projectStatic.getLogger().lifecycle("****************************");
+                projectStatic.getLogger().lifecycle(" " + Reference.NAME_FULL + " is up to date!");
             }
         }
         catch (MalformedURLException e)

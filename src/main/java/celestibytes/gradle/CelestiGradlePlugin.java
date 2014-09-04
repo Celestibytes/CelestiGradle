@@ -14,13 +14,12 @@
 
 package celestibytes.gradle;
 
-import celestibytes.pizzana.derp.DerpException;
-import celestibytes.pizzana.version.Version;
-
 import celestibytes.gradle.dependency.Dependency;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.gradle.reference.Versions;
+import celestibytes.lib.derp.DerpException;
+import celestibytes.lib.version.Version;
 
 import net.minecraftforge.gradle.CopyInto;
 import net.minecraftforge.gradle.FileLogListenner;
@@ -364,8 +363,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             addDependency(project.fileTree("libs"));
         }
         
-        registerCelestiDep("CelestiCore", "0.5.0");
-        registerCelestiDep("CelestiLib", "0.1.0");
+        registerCelestiDep("CelestiCore", "0.5.0", "celesticore", "core");
+        registerCelestiDep("CelestiLib", "0.1.0", "celestilib", "lib");
         
         registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");

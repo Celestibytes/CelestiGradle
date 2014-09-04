@@ -1,11 +1,11 @@
 /*
  * Copyright (C) 2014 Celestibytes
- *
+ * 
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation; either version 2 of the License, or (at your option) any later
  * version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
@@ -14,13 +14,12 @@
 
 package celestibytes.gradle;
 
-import celestibytes.pizzana.derp.DerpException;
-import celestibytes.pizzana.json.JSONUtil;
-import celestibytes.pizzana.version.Version;
-
+import celestibytes.gradle.dependency.Dependency;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.gradle.reference.Versions;
+import celestibytes.lib.derp.DerpException;
+import celestibytes.lib.version.Version;
 
 import net.minecraftforge.gradle.CopyInto;
 import net.minecraftforge.gradle.FileLogListenner;
@@ -37,7 +36,6 @@ import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.google.gson.Gson;
 
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Action;
@@ -46,12 +44,10 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.ProjectConfigurationException;
 import org.gradle.api.Task;
-import org.gradle.api.artifacts.maven.MavenDeployer;
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Delete;
-import org.gradle.api.tasks.Upload;
 import org.gradle.api.tasks.bundling.Jar;
 
 import groovy.lang.Closure;
@@ -59,6 +55,7 @@ import groovy.lang.Closure;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -67,102 +64,234 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO Add ability to read all dependencies from a single file.
+ * The main class of the Celestibytes Gradle {@link Plugin}.
  *
  * @author PizzAna
- *
  */
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
+    /**
+     * A {@code static} instance of the {@link Project}.
+     */
     private static Project projectStatic;
+    
+    /**
+     * A {@code boolean} that tells if CelestiGradle should initialize
+     * ForgeGradle.
+     */
     private static boolean fg;
-
+    
+    /**
+     * The project's version number.
+     */
     private static String versionNumber;
-
+    
+    /**
+     * A {@code boolean} that tells if the project is a Minecraft mod.
+     */
     private static boolean isMinecraftMod = false;
+    
+    /**
+     * The Minecraft's version number. Only needed if the project is a Minecraft
+     * mod.
+     */
     private static String minecraftVersion;
+    
+    /**
+     * A {@code boolean} that tells if the project needs CelestiCore.
+     */
     private static boolean needsCore = false;
+    
+    /**
+     * The CelestiCore version number. Only needed if the project needs
+     * CelestiCore.
+     */
     private static String coreVersion = "";
-
+    
+    /**
+     * The base package of the project. Used for packaging project archives.
+     */
     private static String basePackage;
+    
+    /**
+     * The base directory of the project. Used for packaging project archives.
+     */
     private static String dir;
-
+    
+    /**
+     * The {@link List} of artifacts that should be build.
+     */
     private static List<String> artifactsList = Lists.newArrayList();
-
+    
+    /**
+     * A {@link Closure} that acts as a manifest for project archives if needed.
+     */
     @SuppressWarnings("rawtypes")
     private static Closure manifest;
+    
+    /**
+     * A {@code boolean} that tells if the project has custom manifest.
+     */
     private static boolean hasManifest = false;
-
-    private static String coreArtifact = "";
-    private static String coreDevArtifact = "";
-
-    private static String versionCheckId;
+    
+    /**
+     * The id used to create remote version check files for the project.
+     */
+    private static String versionCheckUrl;
+    
+    /**
+     * A {@code boolean} that tells if the project has a remote version check.
+     */
     private static boolean hasVersionCheck = false;
-    private static String versionDescription;
-
+    
+    /**
+     * The Baubles version number. Only needed if the project needs Baubles.
+     */
     private static String baublesVersion;
+    
+    /**
+     * The Baubles Minecraft version number. Only needed if the project needs
+     * Baubles.
+     */
     private static String baublesMinecraft;
+    
+    /**
+     * A {@code boolean} that tells if the project needs Baubles.
+     */
     private static boolean needsBaubles = false;
-
+    
+    /**
+     * A {@code boolean} that tells if the project uses scala.
+     */
     private static boolean scala = false;
-
-    private static List<String> libs = Lists.newArrayList();
-
+    
+    /**
+     * The {@link List} of dependencies for this project specified in the build
+     * script.
+     */
+    private static List<String> deps = Lists.newArrayList();
+    
+    /**
+     * The relative path to the dependencies file. Only needed if the project
+     * uses the feature.
+     */
+    private static String depsFile;
+    
+    /**
+     * A {@code boolean} that tells if the project uses the external
+     * dependencies file feature.
+     */
+    private static boolean useDepsFile = false;
+    
+    /**
+     * The {@link List} of dependencies already added to this project through
+     * the {@link CelestiGradlePlugin}.
+     */
+    private static List<String> addedLibs = Lists.newArrayList();
+    
+    /**
+     * The {@link Map} of registered dependencies.
+     * <p/>
+     * First the name, then the {@link Dependency}.
+     */
+    private static Map<String, Dependency> knownDeps = Maps.newHashMap();
+    
+    /**
+     * The {@link Map} of alternative names for registered dependencies.
+     * <p/>
+     * First the alias, then the knownDeps key it leads to.
+     */
+    private static Map<String, List<String>> knownAliases = Maps.newHashMap();
+    
+    /**
+     * An instance of the {@link Project}.
+     */
     private Project project;
-
-    private String filesmaven;
-
+    
+    /**
+     * A {@code boolean} that tells if the project has a Java keystore property.
+     */
     private boolean hasKeystore;
-
+    
+    /**
+     * A {@code boolean} that tells if the project is stable.
+     */
     private boolean isStable;
-
+    
+    /**
+     * Apply this plugin to the given target object.
+     *
+     * @param target
+     *            the target object.
+     */
     @Override
-    public void apply(Project arg)
+    public void apply(Project target)
     {
-        project = arg;
-
+        project = target;
+        
         projectStatic = project;
         fg = project.getPlugins().hasPlugin("forge");
-
+        
         FileLogListenner listener = new FileLogListenner(project.file(Constants.LOG));
         project.getLogging().addStandardOutputListener(listener);
         project.getLogging().addStandardErrorListener(listener);
         project.getGradle().addBuildListener(listener);
-
+        
         addRepositories();
         resolveProperties();
         applyPlugins();
-
+        
         if (!fg)
         {
             displayBanner();
         }
-
+        
         addDependencies();
-
+        
         if (needsBaubles)
         {
             makeBaublesTask();
         }
-
+        
         makePackageTasks();
         makeSignTask();
+        makeJsonTask();
         makeLifecycleTasks();
     }
-
+    
+    /**
+     * Adds required maven repositories to the {@link Project}.
+     */
+    private void addRepositories()
+    {
+        project.allprojects(new Action<Project>()
+        {
+            @Override
+            public void execute(Project project)
+            {
+                addMavenRepo(project, "cbts", Reference.MAVEN);
+                project.getRepositories().mavenCentral();
+            }
+        });
+    }
+    
+    /**
+     * Checks that all properties of the {@link Project} are set correctly and
+     * also initializes some properties.
+     */
     private void resolveProperties()
     {
         if (versionNumber == null)
         {
             throw new ProjectConfigurationException("You must set the version number!", new NullPointerException());
         }
-
+        
         if (fg && !isMinecraftMod)
         {
             throw new ProjectConfigurationException("Project has forge plugin but isn't a Minecraft mod!",
                     new DerpException());
         }
-
+        
         if (isMinecraftMod)
         {
             if (needsCore)
@@ -173,33 +302,28 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                             new NullPointerException());
                 }
             }
-
+            
             if (minecraftVersion == null)
             {
                 throw new ProjectConfigurationException("You must set the minecraft version number!",
                         new NullPointerException());
             }
         }
-
+        
         if (basePackage == null)
         {
             throw new ProjectConfigurationException("You must set the base package!", new NullPointerException());
         }
-
-        if (project.hasProperty("filesmaven"))
-        {
-            filesmaven = (String) project.property("filesmaven");
-        }
-        else
-        {
-            filesmaven = "./files";
-        }
-
+        
         hasKeystore = project.hasProperty("keystoreLocation");
-
+        
         isStable = Version.parse(versionNumber).isStable();
     }
-
+    
+    /**
+     * Applies required external and internal {@link Plugin}s to the
+     * {@link Project}.
+     */
     private void applyPlugins()
     {
         if (!fg)
@@ -208,12 +332,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             {
                 applyExternalPlugin("scala");
             }
-
+            
             applyExternalPlugin("java");
             applyExternalPlugin("maven");
             applyExternalPlugin("eclipse");
             applyExternalPlugin("idea");
-
+            
             if (isMinecraftMod)
             {
                 applyExternalPlugin("forge");
@@ -226,246 +350,141 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             }
         }
     }
-
-    private void addRepositories()
-    {
-        project.allprojects(new Action<Project>()
-                {
-            @Override
-            public void execute(Project project)
-            {
-                addMavenRepo(project, "cbts", Reference.MAVEN);
-                project.getRepositories().mavenCentral();
-            }
-                });
-    }
-
+    
+    /**
+     * Registers a list of dependecies to this {@link Plugin} and adds required
+     * dependencies to the {@link Project}.
+     */
+    @SuppressWarnings("unchecked")
     private void addDependencies()
     {
-        if (needsCore)
-        {
-            addDependency(delayedString("{CORE_DEV_ARTIFACT}").call());
-        }
-
         if (!fg)
         {
             addDependency(project.fileTree("libs"));
         }
-
-        if (libs.contains("jinput"))
-        {
-            addDependency("net.java.jinput", "jinput", "2.0.6");
-        }
-
-        if (libs.contains("lwjgl"))
-        {
-            addDependency("org.lwjgl.lwjgl", "lwjgl_util", "2.9.1");
-            addDependency("org.lwjgl.lwjgl", "lwjgl", "2.9.1");
-        }
-
-        if (libs.contains("lzma"))
-        {
-            addDependency("com.github.jponge", "lzma-java", "1.3");
-        }
-
-        if (libs.contains("asm"))
-        {
-            addDependency("org.ow2.asm", "asm-debug-all", "5.0.3");
-        }
-
-        if (libs.contains("akka") || libs.contains("akka-actor"))
-        {
-            addDependency("org.typesafe.akka", "akka-actor_2.11", "2.3.5");
-        }
-
-        if (libs.contains("config"))
-        {
-            addDependency("org.typesafe", "config", "1.2.1");
-        }
-
-        if (scala || libs.contains("scala"))
-        {
-            addDependency("org.scala-lang", "scala-library", "2.11.2");
-            addDependency("org.scala-lang", "scala-reflect", "2.11.2");
-            addDependency("org.scala-lang", "scala-compiler", "2.11.2");
-            addDependency("org.scala-lang", "scala-actors", "2.11.2");
-            // TODO Not tested
-        }
-
-        if (libs.contains("jopt") || libs.contains("jopt-simple"))
-        {
-            addDependency("net.sf.jopt-simple", "jopt-simple", "4.7");
-        }
-
+        
+        registerCelestiDep("CelestiCore", "0.5.0", "celesticore", "core");
+        registerCelestiDep("CelestiLib", "0.1.0", "celestilib", "lib");
+        
+        registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
+        registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");
+        registerDep("akka", "org.typesafe.akka", "akka-actor_2.11", "2.3.5", "akka-actor");
+        registerDep("jopt", "net.sf.jopt-simple", "jopt-simple", "4.7");
+        registerDep("trove", "net.sf.trove4j", "trove4j", "3.0.3");
+        registerDep("netty", "io.netty", "netty-all", "4.0.23.Final");
+        
+        registerDep2("jinput", "net.java.jinput", "2.0.6");
+        registerDep2("lwjgl", "org.lwjgl.lwjgl", "2.9.1");
+        registerDep2("lwjgl_util", "org.lwjgl.lwjgl", "2.9.1", "lwjgl");
+        registerDep2("config", "org.typesafe", "1.2.1");
+        registerDep2("vecmath", "java3d", "1.3.1");
+        registerDep2("jutils", "net.java.jutils", "1.0.0");
+        registerDep2("gson", "com.google.code.gson", "2.3");
+        registerDep2("guava", "com.google.guava", "18.0");
+        registerDep2("argo", "net.sourceforge.argo", "3.12");
+        registerDep2("diff4j", "com.cloudbees", "1.2");
+        registerDep2("jAstyle", "com.github.abrarsyed.jastyle", "1.2", "jastyle");
+        registerDep2("javaxdelta", "com.nothome", "2.0.1");
+        registerDep2("named-regexp", "com.github.tony19", "0.2.3");
+        registerDep2("localizer", "org.jvnet.localizer", "1.12");
+        registerDep2("jsch", "com.jcraft", "0.1.51");
+        registerDep2("javaEWAH", "com.googlecode.javaewah", "0.8.12", "javaewah");
+        
+        registerScala2("library", "library");
+        registerScala2("reflect", "reflect");
+        registerScala2("compiler", "compiler");
+        registerScala2("actors", "actors");
+        
         // TODO Add every commons library because why not :P
-        if (libs.contains("commons") || libs.contains("apache-commons"))
+        registerCommons("lang", "lang3", "3.3.2");
+        registerCommons("compress", "compress", "1.8.1");
+        registerCommons("exec", "exec", "1.2");
+        registerCommons("math", "math3", "3.3");
+        registerCommons("collections", "collections4", "4.0");
+        
+        registerCommons2("io", "io", "2.4");
+        registerCommons2("codec", "codec", "1.9");
+        registerCommons2("logging", "logging", "1.2");
+        
+        registerHttp("core", "4.3.2");
+        
+        registerHttp2("client");
+        registerHttp2("mime");
+        
+        registerLog4j("core");
+        registerLog4j("api");
+        
+        if (needsCore)
         {
-            addDependency("org.apache.commons", "commons-lang3", "3.3.2");
-            addDependency("commons-io", "commons-io", "2.4");
-            addDependency("org.apache.commons", "commons-compress", "1.8.1");
-            addDependency("org.apache.commons", "commons-exec", "1.2");
-            addDependency("org.apache.commons", "commons-math3", "3.3");
-            addDependency("commons-codec", "commons-codec", "1.9");
-            addDependency("commons-logging", "commons-logging", "1.2");
-            addDependency("org.apache.commons", "commons-collections4", "4.0");
+            addDependency("CelestiCore", coreVersion);
         }
-        else
+        
+        if (useDepsFile)
         {
-            if (libs.contains("commons-lang") || libs.contains("lang") || libs.contains("commons-lang3")
-                    || libs.contains("lang3"))
+            try
             {
-                addDependency("org.apache.commons", "commons-lang3", "3.3.2");
+                List<String> lines = FileUtils.readLines(project.file(depsFile));
+                
+                for (String line : lines)
+                {
+                    line = line.trim();
+                    
+                    if (line.equals("") || line == null)
+                    {
+                        continue;
+                    }
+                    
+                    if (line.contains(":"))
+                    {
+                        String[] array = line.split(":");
+                        addDependency(array[0], array[1]);
+                    }
+                    else
+                    {
+                        addDependency(line);
+                    }
+                }
             }
-
-            if (libs.contains("commons-io") || libs.contains("io"))
+            catch (IOException e)
             {
-                addDependency("commons-io", "commons-io", "2.4");
-            }
-
-            if (libs.contains("commons-compress") || libs.contains("compress"))
-            {
-                addDependency("org.apache.commons", "commons-compress", "1.8.1");
-            }
-
-            if (libs.contains("commons-exec") || libs.contains("exec"))
-            {
-                addDependency("org.apache.commons", "commons-exec", "1.2");
-            }
-
-            if (libs.contains("commons-math") || libs.contains("math") || libs.contains("commons-math3")
-                    || libs.contains("math3"))
-            {
-                addDependency("org.apache.commons", "commons-math3", "3.3");
-            }
-
-            if (libs.contains("commons-codec") || libs.contains("codec"))
-            {
-                addDependency("commons-codec", "commons-codec", "1.9");
-            }
-
-            if (libs.contains("commons-logging") || libs.contains("logging"))
-            {
-                addDependency("commons-logging", "commons-logging", "1.2");
-            }
-
-            if (libs.contains("commons-collections") || libs.contains("collections")
-                    || libs.contains("commons-collections4") || libs.contains("collections4"))
-            {
-                addDependency("org.apache.commons", "commons-collections4", "4.0");
+                e.printStackTrace();
             }
         }
-
-        if (libs.contains("http"))
+        
+        if (scala)
         {
-            addDependency("org.apache.httpcomponents", "httpclient", "4.3.5");
-            addDependency("org.apache.httpcomponents", "httpcore", "4.3.2");
-            addDependency("org.apache.httpcomponents", "httpmime", "4.3.5");
+            addDependency("scala");
         }
-        else
+        
+        for (String s : deps)
         {
-            if (libs.contains("httpclient") || libs.contains("http-client"))
+            s = s.trim();
+            
+            if (s.contains(":"))
             {
-                addDependency("org.apache.httpcomponents", "httpclient", "4.3.5");
+                String[] array = s.split(":");
+                addDependency(array[0], array[1]);
             }
-
-            if (libs.contains("httpcore") || libs.contains("http-core"))
+            else
             {
-                addDependency("org.apache.httpcomponents", "httpcore", "4.3.2");
+                addDependency(s);
             }
-
-            if (libs.contains("httpmime") || libs.contains("http-mime"))
-            {
-                addDependency("org.apache.httpcomponents", "httpmime", "4.3.5");
-            }
-        }
-
-        if (libs.contains("vecmath"))
-        {
-            addDependency("java3d", "vecmath", "1.3.1");
-        }
-
-        if (libs.contains("trove") || libs.contains("trove4j"))
-        {
-            addDependency("net.sf.trove4j", "trove4j", "3.0.3");
-        }
-
-        if (libs.contains("netty"))
-        {
-            addDependency("io.netty", "netty-all", "4.0.23.Final");
-        }
-
-        if (libs.contains("jutils"))
-        {
-            addDependency("net.java.jutils", "jutils", "1.0.0");
-        }
-
-        if (libs.contains("gson"))
-        {
-            addDependency("com.google.code.gson", "gson", "2.3");
-        }
-
-        if (libs.contains("log4j"))
-        {
-            addDependency("org.apache.logging.log4j", "log4j-core", "2.0.2");
-            addDependency("org.apache.logging.log4j", "log4j-api", "2.0.2");
-        }
-
-        if (libs.contains("guava"))
-        {
-            addDependency("com.google.guava", "guava", "18.0");
-        }
-
-        if (libs.contains("argo"))
-        {
-            addDependency("net.sourceforge.argo", "argo", "3.12");
-        }
-
-        if (libs.contains("diff") || libs.contains("diff4j"))
-        {
-            addDependency("com.cloudbees", "diff4j", "1.2");
-        }
-
-        if (libs.contains("jAstyle") || libs.contains("jastyle"))
-        {
-            addDependency("com.github.abrarsyed.jastyle", "jAstyle", "1.2");
-        }
-
-        if (libs.contains("javaxdelta"))
-        {
-            addDependency("com.nothome", "javaxdelta", "2.0.1");
-        }
-
-        if (libs.contains("named-regexp"))
-        {
-            addDependency("com.github.tony19", "named-regexp", "0.2.3");
-        }
-
-        if (libs.contains("localizer"))
-        {
-            addDependency("org.jvnet.localizer", "localizer", "1.12");
-        }
-
-        if (libs.contains("jsch"))
-        {
-            addDependency("com.jcraft", "jsch", "0.1.51");
-        }
-
-        if (libs.contains("ewah") || libs.contains("javaewah") || libs.contains("javaEWAH"))
-        {
-            addDependency("com.googlecode.javaewah", "javaEWAH", "0.8.12");
         }
     }
-
+    
+    /**
+     * Makes the tasks for setting up the Baubles dependency.
+     */
     private void makeBaublesTask()
     {
         String baublesFile = "Baubles-deobf-" + baublesMinecraft + "-" + baublesVersion + ".jar";
         final String baublesDest = "libs/" + baublesFile;
         String baublesUrl = "https://dl.dropboxusercontent.com/u/47135879/" + baublesFile;
-
+        
         File[] files = delayedFile("libs").call().listFiles();
         List<File> baubs = new ArrayList<File>();
         boolean hasUpToDateBaubles = false;
-
+        
         if (files != null)
         {
             for (File file : files)
@@ -486,63 +505,66 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 }
             }
         }
-
+        
         Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
-
+        
         for (File file : baubs)
         {
             cleanEveryBaubles.delete(file);
         }
-
+        
         if (hasUpToDateBaubles)
         {
             cleanEveryBaubles.delete(delayedFile(baublesDest).call());
         }
-
+        
         cleanEveryBaubles
-        .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
+                .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
         cleanEveryBaubles.setGroup(Reference.NAME);
-
+        
         Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
-
+        
         for (File file : baubs)
         {
             cleanBaubles.delete(file);
         }
-
+        
         cleanBaubles
-        .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory "
-                + "(excluding the up-to-date one)");
+                .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory "
+                        + "(excluding the up-to-date one)");
         cleanBaubles.setGroup(Reference.NAME);
-
+        
         DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
         getBaubles.setUrl(delayedString(baublesUrl));
         getBaubles.setOutput(delayedFile(baublesDest));
         getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
-                {
+        {
             @Override
             public boolean isSatisfiedBy(Task task)
             {
                 DelayedFile excepted = delayedFile(baublesDest);
                 return excepted.call().exists() && !excepted.call().isDirectory();
             }
-                });
+        });
         getBaubles.setDescription("Downloads the correct version of Baubles");
         getBaubles.setGroup(Reference.NAME);
         getBaubles.dependsOn(cleanBaubles);
-
+        
         project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
     }
-
+    
+    /**
+     * Makes the tasks for building the {@link Project} archives.
+     */
     private void makePackageTasks()
     {
         String changelogFile = "{BUILD_DIR}/libs/" + project.getName() + "-" + project.getVersion() + "-changelog.txt";
-
+        
         final boolean isJenkins = System.getenv("JOB_NAME") != null && project.hasProperty("jenkins_server")
                 && project.hasProperty("jenkins_password") && project.hasProperty("jenkins_user");
-
+        
         ChangelogTask changelog = makeTask("createChangelog", ChangelogTask.class);
-
+        
         if (isJenkins)
         {
             changelog.setServerRoot(delayedString("{JENKINS_SERVER}"));
@@ -552,34 +574,34 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             changelog.setTargetBuild(delayedString("{BUILD_NUM}"));
             changelog.setOutput(delayedFile(changelogFile));
         }
-
+        
         changelog.onlyIf(new Spec<Task>()
-                {
+        {
             @Override
             public boolean isSatisfiedBy(Task task)
             {
                 return isJenkins;
             }
-                });
-
+        });
+        
         changelog.dependsOn("classes", "processResources");
-
+        
         project.getTasks().getByName("build").dependsOn(changelog);
-
+        
         Jar jar = (Jar) project.getTasks().getByName("jar");
-
+        
         if (isJenkins)
         {
             jar.from(delayedFile(changelogFile));
         }
-
+        
         if (hasManifest)
         {
             jar.manifest(manifest);
         }
-
+        
         jar.dependsOn(changelog);
-
+        
         if (artifactsList.contains("javadoc"))
         {
             Jar javadocJar = makeTask("javadocJar", Jar.class);
@@ -589,26 +611,26 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             javadocJar.setExtension("jar");
             project.getArtifacts().add("archives", javadocJar);
         }
-
+        
         if (artifactsList.contains("sources") || artifactsList.contains("src"))
         {
             Jar sourcesJar = makeTask("sourcesJar", Jar.class);
             sourcesJar.setClassifier("sources");
-
+            
             if (isJenkins)
             {
                 sourcesJar.from(delayedFile(changelogFile));
             }
-
+            
             sourcesJar.from(delayedFile("LICENSE"));
             sourcesJar.from(delayedFile("build.gradle"));
             sourcesJar.from(delayedFile("settings.gradle"));
-
+            
             if (scala)
             {
                 sourcesJar.from(delayedFile("{BUILD_DIR}/sources/scala/"));
             }
-
+            
             sourcesJar.from(delayedFile("{BUILD_DIR}/sources/java/"));
             sourcesJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
             sourcesJar.from(delayedFile("gradlew"));
@@ -618,55 +640,58 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             sourcesJar.setExtension("jar");
             project.getArtifacts().add("archives", sourcesJar);
         }
-
+        
         if (artifactsList.contains("api"))
         {
             String apiDir = dir + "/api/";
-
+            
             Jar apiJar = makeTask("apiJar", Jar.class);
             apiJar.setClassifier("api");
-
+            
             if (scala)
             {
                 apiJar.from(delayedFile("{BUILD_DIR}/sources/scala/" + apiDir), new CopyInto(apiDir));
             }
-
+            
             apiJar.from(delayedFile("{BUILD_DIR}/sources/java/" + apiDir), new CopyInto(apiDir));
             apiJar.dependsOn(jar);
             apiJar.setExtension("jar");
             project.getArtifacts().add("archives", apiJar);
         }
-
+        
         if (artifactsList.contains("dev") || artifactsList.contains("deobf"))
         {
             Jar devJar = makeTask("devJar", Jar.class);
             devJar.setClassifier("dev");
-
+            
             if (isJenkins)
             {
                 devJar.from(delayedFile(changelogFile));
             }
-
+            
             devJar.from(delayedFile("LICENSE"));
             devJar.from(delayedFile("{BUILD_DIR}/classes/main/"));
             devJar.from(delayedFile("{BUILD_DIR}/classes/api/"));
             devJar.from(delayedFile("{BUILD_DIR}/resources/main/"));
-
+            
             if (hasManifest)
             {
                 devJar.manifest(manifest);
             }
-
+            
             devJar.dependsOn(jar);
             devJar.setExtension("jar");
             project.getArtifacts().add("archives", devJar);
         }
     }
-
+    
+    /**
+     * Makes the task for signing the {@link Project} archives.
+     */
     private void makeSignTask()
     {
         DefaultTask signJar = makeTask("signJar");
-
+        
         if (hasKeystore)
         {
             final Jar jar = (Jar) project.getTasks().getByName("jar");
@@ -674,22 +699,22 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             final File keystoreLocation = project.file(project.getProperties().get("keystore_location"));
             final String keystoreAlias = (String) project.getProperties().get("keystore_alias");
             final String keystorePassword = (String) project.getProperties().get("keystore_password");
-
+            
             signJar.getInputs().file(jarPath);
             signJar.getInputs().file(keystoreLocation);
             signJar.getInputs().property("keystore_alias", keystoreAlias);
             signJar.getInputs().property("keystore_password", keystorePassword);
             signJar.getOutputs().file(jarPath);
             signJar.onlyIf(new Spec<Task>()
-                    {
+            {
                 @Override
                 public boolean isSatisfiedBy(Task task)
                 {
                     return hasKeystore;
                 }
-                    });
+            });
             signJar.doLast(new Action<Task>()
-                    {
+            {
                 @Override
                 public void execute(Task task)
                 {
@@ -701,187 +726,555 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     args.put("storepass", keystorePassword);
                     invokeAnt("signjar", args);
                 }
-                    });
+            });
         }
-
+        
         signJar.dependsOn("build");
-
+        
         project.getTasks().getByName("uploadArchives").dependsOn(signJar);
     }
-
-    private void makeLifecycleTasks()
+    
+    /**
+     * Makes the task for processing the {@link Project}'s version check files.
+     */
+    private void makeJsonTask()
     {
         DefaultTask processJson = makeTask("processJson");
         processJson.onlyIf(new Spec<Task>()
-                {
+        {
             @Override
             public boolean isSatisfiedBy(Task task)
             {
                 return hasVersionCheck && isStable;
             }
-                });
+        });
         processJson.doLast(new Action<Task>()
-                {
+        {
             @Override
-            @SuppressWarnings("unchecked")
             public void execute(Task task)
             {
                 try
                 {
-                    URLConnection urlConnection = new URL(Reference.MAVEN + "data.json").openConnection();
-
+                    URLConnection urlConnection = new URL(versionCheckUrl + "/version.txt").openConnection();
+                    
+                    if (isMinecraftMod)
+                    {
+                        urlConnection = new URL(versionCheckUrl + "/" + minecraftVersion + ".txt").openConnection();
+                    }
+                    
                     urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
                     urlConnection.connect();
-
+                    
                     InputStream inputStream = urlConnection.getInputStream();
-
-                    String json = new String(ByteStreams.toByteArray(inputStream));
-
+                    
+                    @SuppressWarnings("unused")
+                    @Deprecated
+                    String data = new String(ByteStreams.toByteArray(inputStream));
+                    
                     inputStream.close();
-
-                    Map<String, Object> data = new Gson().fromJson(json, Map.class);
-
-                    String separator;
-                    String summary;
-
-                    if (data.containsKey(JSONUtil.SEPARATOR) && data.get(JSONUtil.SEPARATOR) instanceof String)
+                    
+                    // TODO Think about alternative solutions for the version
+                    // check location
+                    Map<String, String> args = Maps.newHashMap();
+                    
+                    if (isMinecraftMod)
                     {
-                        separator = (String) data.get(JSONUtil.SEPARATOR);
+                        args.put("file", "./" + minecraftVersion + ".txt");
                     }
                     else
                     {
-                        throw new DerpException("No separator specified in data json", new NullPointerException());
+                        args.put("file", "./version.txt");
                     }
-
-                    if (data.containsKey(JSONUtil.SUMMARY) && data.get(JSONUtil.SUMMARY) instanceof String)
-                    {
-                        summary = (String) data.get(JSONUtil.SUMMARY);
-                    }
-                    else
-                    {
-                        throw new DerpException("No summary specified in data json", new NullPointerException());
-                    }
-
-                    urlConnection = new URL(Reference.MAVEN + versionCheckId + ".json").openConnection();
-
-                    urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
-                    urlConnection.connect();
-
-                    inputStream = urlConnection.getInputStream();
-
-                    json = new String(ByteStreams.toByteArray(inputStream));
-
-                    inputStream.close();
-
-                    data = new Gson().fromJson(json, Map.class);
-
-                    Map<String, String> args = newHashMap();
-                    args.put("file", filesmaven + "/" + versionCheckId + ".json");
+                    
                     invokeAnt("delete", args);
-
-                    writeJsonToFile(project.file(filesmaven + "/" + versionCheckId + ".json"),
-                            processMaps(data, separator, summary));
+                    
+                    if (isMinecraftMod)
+                    {
+                        FileUtils.writeStringToFile(project.file("./" + minecraftVersion + ".txt"), versionNumber);
+                    }
+                    else
+                    {
+                        FileUtils.writeStringToFile(project.file("./version.txt"), versionNumber);
+                    }
                 }
                 catch (IOException e)
                 {
                     e.printStackTrace();
                 }
-                catch (DerpException e)
-                {
-                    e.printStackTrace();
-                }
             }
-                });
+        });
         processJson.dependsOn("uploadArchives");
-
+    }
+    
+    /**
+     * Makes the tasks related to build's lifecycle.
+     */
+    private void makeLifecycleTasks()
+    {
         DefaultTask release = makeTask("release");
         release.setDescription("Wrapper task for building release-ready archives.");
         release.setGroup(Reference.NAME);
-        release.dependsOn(processJson);
+        release.dependsOn("processJson");
     }
-
-    private Map<String, Object> processMaps(Map<String, Object> data, String separator, String summary)
-            throws IOException, DerpException
-            {
-        StringBuilder builder = new StringBuilder();
-
-        if (isMinecraftMod)
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param name
+     *            the dependency name.
+     */
+    private void addDependency(String name)
+    {
+        if (knownAliases.containsKey(name))
         {
-            builder.append(minecraftVersion);
+            for (String s : knownAliases.get(name))
+            {
+                addDependency(knownDeps.get(s));
+            }
         }
         else
         {
-            builder.append("version");
+            addDependency(new Dependency(name.split(":")[0], name.split(":")[1], name.split(":")[2]));
         }
-
-        String s = builder.toString();
-
-        data.put(s, versionNumber);
-
-        builder.append(separator);
-        builder.append(summary);
-
-        s = builder.toString();
-
-        data.put(s, versionDescription);
-
-        return data;
-            }
-
-    @SuppressWarnings("unused")
-    private static <K, V> Map<K, V> newMap()
-    {
-        return new HashMap<K, V>();
     }
-
-    private static <K, V> Map<K, V> newHashMap()
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param dependency
+     *            the dependency.
+     */
+    private void addDependency(Dependency dependency)
     {
-        return Maps.newHashMap();
+        addDependency(dependency.getGroup(), dependency.getArtifact(), dependency.getVersion());
     }
-
-    private static File writeJsonToFile(File file, Map<String, Object> data) throws IOException
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     */
+    private void addDependency(String name, String version)
     {
-        FileUtils.writeStringToFile(file, new Gson().toJson(data));
-        return file;
+        addDependency(knownDeps.get(name), version);
     }
-
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param dependency
+     *            the dependency.
+     * @param version
+     *            the dependency version.
+     */
+    private void addDependency(Dependency dependency, String version)
+    {
+        addDependency(dependency.getGroup(), dependency.getArtifact(), version);
+    }
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param group
+     *            the dependency group.
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     */
     private void addDependency(String group, String name, String version)
     {
         addDependency(project, group, name, version);
     }
-
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param dependency
+     *            the dependency.
+     */
     private void addDependency(Object dependency)
     {
         addDependency(project, dependency);
     }
-
-    private static void addDependency(Project project, String group, String name, String version)
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param project
+     *            the {@link Project}.
+     * @param group
+     *            the dependency group.
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     */
+    public static void addDependency(Project project, String group, String name, String version)
     {
         addDependency(project, group + ":" + name + ":" + version);
     }
-
-    private static void addDependency(Project project, Object dependency)
+    
+    /**
+     * Adds a dependency to the {@link Project}.
+     *
+     * @param project
+     *            the {@link Project}.
+     * @param dependency
+     *            the dependency.
+     */
+    public static void addDependency(Project project, Object dependency)
     {
+        if (dependency instanceof String && addedLibs.contains(dependency))
+        {
+            return;
+        }
+        
         project.getDependencies().add("compile", dependency);
+        
+        if (dependency instanceof String)
+        {
+            addedLibs.add((String) dependency);
+        }
     }
-
+    
+    /**
+     * Registers a Celestibytes {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerCelestiDep(String name, String version, String... aliases)
+    {
+        registerDep(name, "io.github.celestibytes", name, version, aliases);
+    }
+    
+    /**
+     * Registers a Scala {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerScala2(String name, String artifact, String... aliases)
+    {
+        registerScala(name, artifact, "2.11.2", aliases);
+    }
+    
+    /**
+     * Registers a Scala {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerScala(String name, String artifact, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 1];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "scala";
+        
+        registerDep("scala-" + name, "org.scala-lang", "scala-" + artifact, version, array);
+    }
+    
+    /**
+     * Registers an Apache Commons {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerCommons(String name, String artifact, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 2];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "apache-commons";
+        array[i++] = "commons";
+        
+        registerDep("commons-" + name, "org.apache.commons", "commons-" + artifact, version, array);
+    }
+    
+    /**
+     * Registers an Apache Commons {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerCommons2(String name, String artifact, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 2];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "apache-commons";
+        array[i++] = "commons";
+        
+        registerDep("commons-" + name, "commons-" + name, "commons-" + artifact, version, array);
+    }
+    
+    /**
+     * Registers an Apache HTTP {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerHttp2(String name, String... aliases)
+    {
+        registerHttp(name, "4.3.5", aliases);
+    }
+    
+    /**
+     * Registers an Apache HTTP {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerHttp(String name, String version, String... aliases)
+    {
+        String[] array = new String[aliases.length + 2];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "http";
+        array[i++] = "http-" + name;
+        
+        registerDep("http" + name, "org.apache.httpcomponents", "http" + name, version, array);
+    }
+    
+    /**
+     * Registers an Apache Log4J {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerLog4j(String name, String... aliases)
+    {
+        String[] array = new String[aliases.length + 1];
+        
+        int i = 0;
+        
+        for (String alias : aliases)
+        {
+            array[i] = alias;
+            i++;
+        }
+        
+        array[i++] = "log4j";
+        
+        registerDep("log4j-" + name, "org.apache.logging.log4j", "log4j-" + name, "2.0.2", array);
+    }
+    
+    /**
+     * Registers a {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param group
+     *            the dependency group.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerDep2(String name, String group, String version, String... aliases)
+    {
+        registerDep(name, group, name, version, aliases);
+    }
+    
+    /**
+     * Registers a {@link Dependency}.
+     *
+     * @param name
+     *            the dependency name.
+     * @param group
+     *            the dependency group.
+     * @param artifact
+     *            the dependency artifact.
+     * @param version
+     *            the dependency version.
+     * @param aliases
+     *            the dependency aliases.
+     */
+    public static void registerDep(String name, String group, String artifact, String version, String... aliases)
+    {
+        if (knownDeps.containsKey(name))
+        {
+            return;
+        }
+        
+        knownDeps.put(name, new Dependency(name, group, artifact, version, aliases));
+        
+        List<String> list;
+        
+        if (knownAliases.containsKey(name))
+        {
+            list = knownAliases.get(name);
+        }
+        else
+        {
+            list = Lists.newArrayList();
+        }
+        
+        if (!list.contains(name))
+        {
+            list.add(name);
+        }
+        
+        knownAliases.put(name, list);
+        
+        if (knownAliases.containsKey(artifact))
+        {
+            list = knownAliases.get(artifact);
+        }
+        else
+        {
+            list = Lists.newArrayList();
+        }
+        
+        if (!list.contains(name))
+        {
+            list.add(name);
+        }
+        
+        knownAliases.put(artifact, list);
+        
+        for (String alias : aliases)
+        {
+            if (knownAliases.containsKey(alias))
+            {
+                list = knownAliases.get(alias);
+            }
+            else
+            {
+                list = Lists.newArrayList();
+            }
+            
+            if (!list.contains(name))
+            {
+                list.add(name);
+            }
+            
+            knownAliases.put(alias, list);
+        }
+    }
+    
+    /**
+     * Displays the banner in the beginning of the build.
+     */
     public static void displayBanner()
     {
+        try
+        {
+            URLConnection urlConnection = new URL(Reference.VERSION_CHECK_URL).openConnection();
+            urlConnection.setRequestProperty("User-Agent", System.getProperty("java.version"));
+            urlConnection.connect();
+            
+            InputStream inputStream = urlConnection.getInputStream();
+            
+            String data = new String(ByteStreams.toByteArray(inputStream));
+            
+            inputStream.close();
+            
+            Version remote = Version.parse(data);
+            
+            if (Version.parse(Versions.VERSION).compareTo(remote) < 0)
+            {
+                projectStatic.getLogger().lifecycle("****************************");
+                projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available:");
+                projectStatic.getLogger().lifecycle(" " + data);
+            }
+            else
+            {
+                projectStatic.getLogger().lifecycle("****************************");
+                projectStatic.getLogger().lifecycle(" " + Reference.NAME_FULL + " is up to date!");
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        
         projectStatic.getLogger().lifecycle("****************************");
         projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
         projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);
         projectStatic.getLogger().lifecycle(" Project version " + versionNumber);
-
+        
         if (fg)
         {
             projectStatic.getLogger().lifecycle(" ForgeGradle enabled        ");
             projectStatic.getLogger().lifecycle(" Minecraft version " + minecraftVersion);
-
+            
             if (needsCore)
             {
                 projectStatic.getLogger().lifecycle(" Celestibytes Core version " + coreVersion);
             }
-
+            
             if (needsBaubles)
             {
                 projectStatic.getLogger().lifecycle(" Baubles version " + baublesVersion);
@@ -892,141 +1285,289 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             projectStatic.getLogger().lifecycle("****************************");
         }
     }
-
+    
+    /**
+     * Makes a {@link DefaultTask}.
+     * 
+     * @param name
+     *            the name.
+     * @return the {@link DefaultTask}.
+     */
     public DefaultTask makeTask(String name)
     {
         return makeTask(name, DefaultTask.class);
     }
-
+    
+    /**
+     * Makes a {@link Task}.
+     * 
+     * @param name
+     *            the name.
+     * @param type
+     *            the type.
+     * @return the {@link Task}.
+     */
     public <T extends Task> T makeTask(String name, Class<T> type)
     {
         return makeTask(project, name, type);
     }
-
+    
+    /**
+     * Makes a {@link Task}.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param name
+     *            the name.
+     * @param type
+     *            the type.
+     * @return the {@link Task}.
+     */
     @SuppressWarnings("unchecked")
-    private static <T extends Task> T makeTask(Project proj, String name, Class<T> type)
+    private static <T extends Task> T makeTask(Project project, String name, Class<T> type)
     {
         HashMap<String, Object> map = new HashMap<String, Object>();
         map.put("name", name);
         map.put("type", type);
-        return (T) proj.task(map, name);
+        return (T) project.task(map, name);
     }
-
+    
+    /**
+     * Invokes an ant task.
+     * 
+     * @param task
+     *            the task.
+     * @param args
+     *            the arguments.
+     */
     public void invokeAnt(String task, Map<String, String> args)
     {
         invokeAnt(project, task, args);
     }
-
+    
+    /**
+     * Invokes an ant task.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param task
+     *            the task.
+     * @param args
+     *            the arguments.
+     */
     public static void invokeAnt(Project project, String task, Map<String, String> args)
     {
         project.getAnt().invokeMethod(task, args);
     }
-
+    
+    /**
+     * Applies an external {@link Plugin} to the {@link Project}.
+     * 
+     * @param plugin
+     *            the {@link Plugin}.
+     */
     public void applyExternalPlugin(String plugin)
     {
         HashMap<String, Object> map = new HashMap<String, Object>();
         map.put("plugin", plugin);
         project.apply(map);
     }
-
+    
+    /**
+     * Adds a Maven repository to the {@link Project}.
+     * 
+     * @param project
+     *            the {@link Project}
+     * @param name
+     *            the name.
+     * @param url
+     *            the url.
+     * @return the {@link MavenArtifactRepository}.
+     */
     public static MavenArtifactRepository addMavenRepo(Project project, final String name, final String url)
     {
         return project.getRepositories().maven(new Action<MavenArtifactRepository>()
-                {
+        {
             @Override
             public void execute(MavenArtifactRepository repo)
             {
                 repo.setName(name);
                 repo.setUrl(url);
             }
-                });
+        });
     }
-
+    
+    /**
+     * Adds a flat file repository to the {@link Project}.
+     * 
+     * @param project
+     *            the {@link Project}
+     * @param name
+     *            the name.
+     * @param dirs
+     *            the directories.
+     * @return the {@link FlatDirectoryArtifactRepository}.
+     */
     public static FlatDirectoryArtifactRepository addFlatRepo(Project project, final String name, final Object... dirs)
     {
         return project.getRepositories().flatDir(new Action<FlatDirectoryArtifactRepository>()
-                {
+        {
             @Override
             public void execute(FlatDirectoryArtifactRepository repo)
             {
                 repo.setName(name);
                 repo.dirs(dirs);
             }
-                });
+        });
     }
-
+    
+    /**
+     * Creates a new {@link DelayedString}.
+     * 
+     * @param path
+     *            the path.
+     * @return the {@link DelayedString}.
+     */
     protected DelayedString delayedString(String path)
     {
         return new DelayedString(project, path, this);
     }
-
+    
+    /**
+     * Creates a new {@link DelayedFile}.
+     * 
+     * @param path
+     *            the path.
+     * @return the {@link DelayedFile}.
+     */
     protected DelayedFile delayedFile(String path)
     {
         return new DelayedFile(project, path, this);
     }
-
+    
+    /**
+     * Creates a new {@link DelayedFileTree}.
+     * 
+     * @param path
+     *            the path.
+     * @return the {@link DelayedFileTree}.
+     */
     protected DelayedFileTree delayedFileTree(String path)
     {
         return new DelayedFileTree(project, path, this);
     }
-
+    
+    /**
+     * Creates a new {@link DelayedFileTree}.
+     * 
+     * @param path
+     *            the path.
+     * @return the {@link DelayedFileTree}.
+     */
     protected DelayedFileTree delayedZipTree(String path)
     {
         return new DelayedFileTree(project, path, true, this);
     }
-
+    
+    /**
+     * Resolves a pattern.
+     */
     @Override
     public String resolve(String pattern, Project project, BaseExtension extension)
     {
-        pattern = pattern.replace("{CORE_ARTIFACT}", coreArtifact);
-        pattern = pattern.replace("{CORE_DEV_ARTIFACT}", coreDevArtifact);
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         pattern = pattern.replace("{CORE_VERSION}", coreVersion);
         pattern = pattern.replace("{CORE_NAME}", Projects.CORE);
         return pattern;
     }
-
+    
+    /**
+     * Gets a property from CelestialWizardry's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getCWVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
         return getProperty(project, "src/main/" + s + "/celestibytes/celestialwizardry/reference/Versions.java", field);
     }
-
+    
+    /**
+     * Gets a property from Doughcraft's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getDgCVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
         return getProperty(project, "src/main/" + s + "/pizzana/doughcraft/reference/Versions.java", field);
     }
-
+    
+    /**
+     * Gets a property from CelestiGradle's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getCGVersion(Project project, String field) throws IOException
     {
         return getProperty(project, "src/main/java/celestibytes/gradle/reference/Versions.java", field);
     }
-
+    
+    /**
+     * Gets a property from CelestiCore's version source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     public static String getCoreVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
         return getProperty(project, "src/main/" + s + "/celestibytes/core/reference/Versions.java", field);
     }
-
-    public static String getTTVersion(Project project, String field) throws IOException
-    {
-        // String s = scala ? "scala" : "java";
-        return getProperty(project, "src/celestibytes/tankytanks/reference/Versions.java", field);
-    }
-
+    
+    /**
+     * Gets a property from a Scala or Java source file.
+     * 
+     * @param project
+     *            the {@link Project}.
+     * @param file
+     *            the relative file.
+     * @param field
+     *            the field.
+     * @return the property.
+     * @throws IOException
+     */
     @SuppressWarnings("unchecked")
     public static String getProperty(Project project, String file, String field) throws IOException
     {
         String property = "unknown";
-
+        
         String prefix = scala ? "final val " + field + ": String" : "public static final String " + field;
         List<String> lines = FileUtils.readLines(project.file(file));
-
+        
         for (String line : lines)
         {
             line = line.trim();
-
+            
             if (line.startsWith(prefix))
             {
                 line = line.substring(prefix.length(), line.length() - 1);
@@ -1035,92 +1576,209 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 break;
             }
         }
-
+        
         return property;
     }
-
+    
+    /**
+     * Sets the {@link Project}'s version number.
+     * 
+     * @param version
+     *            the version number.
+     * @return the version number.
+     */
     public static String versionNumber(String version)
     {
         return setVersionNumber(version);
     }
-
+    
+    /**
+     * Sets the {@link Project}'s version number.
+     * 
+     * @param version
+     *            the version number.
+     * @return the version number.
+     */
     public static String setVersionNumber(String version)
     {
         versionNumber = version;
         return versionNumber;
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @return the Minecraft version.
+     */
+    public static String mc()
+    {
+        return setMc();
+    }
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @param version
+     *            the Minecraft version.
+     * @return the Minecraft version.
+     */
     public static String mc(String version)
     {
         return setMc(version);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @return the Minecraft version.
+     */
     public static String setMc()
     {
         return setMc(Versions.DEFAULT_MINECRAFT_VERSION);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} is a
+     * Minecraft mod.
+     * 
+     * @param version
+     *            the Minecraft version.
+     * @return the Minecraft version.
+     */
     public static String setMc(String version)
     {
         isMinecraftMod = true;
         minecraftVersion = version;
         return version;
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * CelestiCore.
+     * 
+     * @param version
+     *            the CelestiCore version.
+     * @return the CelestiCore version.
+     */
     public static String core(String version)
     {
         return setCore(version);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * CelestiCore.
+     * 
+     * @param version
+     *            the CelestiCore version.
+     * @return the CelestiCore version.
+     */
     public static String setCore(String version)
     {
         needsCore = true;
         coreVersion = version;
-        coreArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion;
-        coreDevArtifact = "io.github.celestibytes:CelestiCore:" + coreVersion + ":dev";
         return version;
     }
-
+    
+    /**
+     * Sets the base package for this {@link Project}.
+     * 
+     * @param s
+     *            the base package.
+     * @return the base package.
+     */
     public static String basePackage(String s)
     {
         return setBasePackage(s);
     }
-
+    
+    /**
+     * Sets the base package for this {@link Project}.
+     * 
+     * @param s
+     *            the base package.
+     * @return the base package.
+     */
     public static String setBasePackage(String s)
     {
         basePackage = s;
         dir = basePackage.replace('.', '/');
         return s;
     }
-
+    
+    /**
+     * Sets the artifacts {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the artifacts {@link List}.
+     * @return the artifacts {@link List}.
+     */
     public static List<String> artifactsList(List<String> list)
     {
         return setArtifactsList(list);
     }
-
+    
+    /**
+     * Sets the artifacts {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the artifacts {@link List}.
+     * @return the artifacts {@link List}.
+     */
     public static List<String> setArtifactsList(List<String> list)
     {
         artifactsList = list;
         return list;
     }
-
+    
+    /**
+     * Adds an artifact to the artifacts {@link List} of this {@link Project}.
+     * 
+     * @param s
+     *            the artifact.
+     * @return the artifact.
+     */
     public static String artifact(String s)
     {
         return setArtifact(s);
     }
-
+    
+    /**
+     * Adds an artifact to the artifacts {@link List} of this {@link Project}.
+     * 
+     * @param s
+     *            the artifact.
+     * @return the artifact.
+     */
     public static String setArtifact(String s)
     {
         artifactsList.add(s);
         return s;
     }
-
+    
+    /**
+     * Sets a custom manifest to this {@link Project}.
+     * 
+     * @param c
+     *            the manifest.
+     * @return the manifest.
+     */
     @SuppressWarnings("rawtypes")
     public static Closure manifest(Closure c)
     {
         return setManifest(c);
     }
-
+    
+    /**
+     * Sets a custom manifest to this {@link Project}.
+     * 
+     * @param c
+     *            the manifest.
+     * @return the manifest.
+     */
     @SuppressWarnings("rawtypes")
     public static Closure setManifest(Closure c)
     {
@@ -1128,65 +1786,84 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         manifest = c;
         return c;
     }
-
-    public static String versionCheck(Project p)
-    {
-        return setVersionCheck(p);
-    }
-
+    
+    /**
+     * Enables the version check feature for this {@link Project}.
+     * 
+     * @param p
+     *            the version check url.
+     * @return the version check id.
+     */
     public static String versionCheck(String id)
     {
         return setVersionCheck(id);
     }
-
-    public static String setVersionCheck(Project p)
-    {
-        return setVersionCheck(p.getName().toLowerCase());
-    }
-
+    
+    /**
+     * Enables the version check feature for this {@link Project}.
+     * 
+     * @param p
+     *            the version check url.
+     * @return the version check id.
+     */
     public static String setVersionCheck(String id)
     {
-        return setVersionCheck(id, "null");
-    }
-
-    public static String versionCheck(Project p, String desc)
-    {
-        return setVersionCheck(p, desc);
-    }
-
-    public static String versionCheck(String id, String desc)
-    {
-        return setVersionCheck(id, desc);
-    }
-
-    public static String setVersionCheck(Project p, String desc)
-    {
-        return setVersionCheck(p.getName().toLowerCase(), desc);
-    }
-
-    public static String setVersionCheck(String id, String desc)
-    {
-        versionCheckId = id;
+        versionCheckUrl = id;
         hasVersionCheck = true;
-        versionDescription = desc;
         return id;
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @return the Baubles version.
+     */
     public static String baubles(String s)
     {
         return setBaubles(s);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @param mc
+     *            the Baubles Minecraft version.
+     * @return the Baubles version.
+     */
     public static String baubles(String s, String mc)
     {
         return setBaubles(s, mc);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @return the Baubles version.
+     */
     public static String setBaubles(String s)
     {
         return setBaubles(s, minecraftVersion);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} depends on
+     * Baubles.
+     * 
+     * @param s
+     *            the Baubles version.
+     * @param mc
+     *            the Baubles Minecraft version.
+     * @return the Baubles version.
+     */
     public static String setBaubles(String s, String mc)
     {
         baublesVersion = s;
@@ -1194,47 +1871,151 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         needsBaubles = true;
         return s;
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean scala()
     {
         return scala(true);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean setScala()
     {
         return setScala(true);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @param b
+     *            is Scala enabled.
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean scala(boolean b)
     {
         return setScala(b);
     }
-
+    
+    /**
+     * Tells {@link CelestiGradlePlugin} that this {@link Project} uses Scala.
+     * 
+     * @param b
+     *            is Scala enabled.
+     * @return {@code true} if the {@link Project} uses Scala, otherwise
+     *         {@code false}.
+     */
     public static boolean setScala(boolean b)
     {
         scala = b;
         return b;
     }
-
-    public static List<String> libsList(List<String> list)
+    
+    /**
+     * Sets the dependencies {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the dependencies {@link List}.
+     * @return the dependencies {@link List}.
+     */
+    public static List<String> depsList(List<String> list)
     {
-        return setLibsList(list);
+        return setDepsList(list);
     }
-
-    public static List<String> setLibsList(List<String> list)
+    
+    /**
+     * Sets the dependencies {@link List} for this {@link Project}.
+     * 
+     * @param list
+     *            the dependencies {@link List}.
+     * @return the dependencies {@link List}.
+     */
+    public static List<String> setDepsList(List<String> list)
     {
-        libs = list;
+        deps = list;
         return list;
     }
-
-    public static String lib(String s)
+    
+    /**
+     * Adds an dependency to the dependencies {@link List} of this
+     * {@link Project}.
+     * 
+     * @param s
+     *            the dependency.
+     * @return the dependency.
+     */
+    public static String dep(String s)
     {
-        return setLib(s);
+        return setDep(s);
     }
-
-    public static String setLib(String s)
+    
+    /**
+     * Adds an dependency to the dependencies {@link List} of this
+     * {@link Project}.
+     * 
+     * @param s
+     *            the dependency.
+     * @return the dependency.
+     */
+    public static String setDep(String s)
     {
-        libs.add(s);
+        deps.add(s);
+        return s;
+    }
+    
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @return the relative file.
+     */
+    public static String depsFile()
+    {
+        return setDepsFile(Reference.DEFAULT_DEPS_FILE);
+    }
+    
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @return the relative file.
+     */
+    public static String setDepsFile()
+    {
+        return setDepsFile(Reference.DEFAULT_DEPS_FILE);
+    }
+    
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @param s
+     *            the relative file.
+     * @return the relative file.
+     */
+    public static String depsFile(String s)
+    {
+        return setDepsFile(s);
+    }
+    
+    /**
+     * Adds an dependency list file to this {@link Project}.
+     * 
+     * @param s
+     *            the relative file.
+     * @return the relative file.
+     */
+    public static String setDepsFile(String s)
+    {
+        depsFile = s;
+        useDepsFile = true;
         return s;
     }
 }

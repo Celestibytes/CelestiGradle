@@ -28,7 +28,7 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 group = 'io.github.celestibytes'
-version = "3.0.2"
+version = "3.2-SNAPSHOT"
 archivesBaseName = project.getName()
 targetCompatibility = '1.6'
 sourceCompatibility = '1.6'

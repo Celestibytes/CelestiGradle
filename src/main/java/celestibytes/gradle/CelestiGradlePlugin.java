@@ -316,7 +316,15 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         hasKeystore = project.hasProperty("keystoreLocation");
         
-        isStable = Version.parse(versionNumber).isStable();
+        try 
+        {
+            isStable = Version.parse(versionNumber).isStable();
+        }
+        catch (NullPointerException npe)
+        {
+            npe.printStackTrace();
+            isStable = true;
+        }
     }
     
     /**

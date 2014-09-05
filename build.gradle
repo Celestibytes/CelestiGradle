@@ -73,7 +73,7 @@ configurations {
 }
 
 configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheChangingModulesFor 60, 'seconds'
 }
 
 dependencies {
@@ -106,7 +106,7 @@ dependencies {
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // CelestiLib
-    compile 'io.github.celestibytes:CelestiLib:0.3-SNAPSHOT', changing: true
+    compile group: 'io.github.celestibytes', name: 'CelestiLib', version: '0.3-SNAPSHOT', changing: true
 
     // stupid maven
     deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"

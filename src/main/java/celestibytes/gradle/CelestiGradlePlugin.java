@@ -144,7 +144,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The id used to create remote version check files for the project.
      * <p/>
      * TODO Think if this is really needed.
-     * 
+     *
      * @deprecated
      */
     @SuppressWarnings("unused")
@@ -381,8 +381,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             addDependency(project.fileTree("libs"));
         }
         
-        registerCelestiDep("CelestiCore", "0.5.0", "celesticore", "core");
-        registerCelestiDep("CelestiLib", "0.1.0", "celestilib", "lib");
+        registerCelestiDep("CelestiCore", "0.6.0", "celesticore", "core");
+        registerCelestiDep("CelestiLib", "0.3.0", "celestilib", "lib");
         
         registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");

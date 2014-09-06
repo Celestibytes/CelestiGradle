@@ -1,0 +1,24 @@
+# gradle
+.gradle
+build
+gradle-app.setting
+gradle.properties
+
+# GMCP plugin
+/minecraft
+
+# eclipse
+.settings
+.metadata
+.classpath
+.project
+bin
+
+# IntelliJ IDEA
+/.idea
+/*.iml
+/*.ipr
+/*.iws
+/out
+/atlassian-ide-plugin.xml
+/repo/

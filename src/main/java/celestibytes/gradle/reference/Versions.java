@@ -16,6 +16,6 @@ package celestibytes.gradle.reference;
 
 public final class Versions
 {
-    public static final String VERSION = "3.2.0";
+    public static final String VERSION = "3.3-SNAPSHOT";
     public static final String DEFAULT_MINECRAFT_VERSION = "1.7.10";
 }

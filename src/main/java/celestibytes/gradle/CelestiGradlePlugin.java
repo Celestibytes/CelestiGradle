@@ -1231,7 +1231,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     /**
      * Displays the banner in the beginning of the build.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static void displayBanner()
     {
         try

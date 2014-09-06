@@ -20,7 +20,7 @@ buildscript {
 
 import static celestibytes.gradle.CelestiGradlePlugin.*
 
-version = versionNumber('1.0.0')
+versionNumber('1.0.0')
 basePackage('celestibytes.lib')
 artifactsList(['javadoc', 'src'])
 

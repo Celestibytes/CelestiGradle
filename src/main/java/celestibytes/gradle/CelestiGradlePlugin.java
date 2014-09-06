@@ -90,7 +90,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The field's name can't be {@code version} because it would mess up with
      * Gradle's own {@code version} field.
      */
-    @SuppressWarnings("rawtypes")
     private static Version versionObj;
     
     /**
@@ -145,9 +144,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The id used to create remote version check files for the project.
      * <p/>
      * TODO Think if this is really needed.
+     * 
+     * @deprecated
      */
     @SuppressWarnings("unused")
-    private static String versionCheckUrl;
+    @Deprecated
+    private static String versionCheckUrl1;
     
     /**
      * A {@code boolean} that tells if the project has a remote version check.
@@ -1793,28 +1795,18 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     /**
      * Enables the version check feature for this {@link Project}.
-     *
-     * @param p
-     *            the version check url.
-     * @return the version check id.
      */
-    public static String versionCheck(String id)
+    public static void versionCheck()
     {
-        return setVersionCheck(id);
+        setVersionCheck();
     }
     
     /**
      * Enables the version check feature for this {@link Project}.
-     *
-     * @param p
-     *            the version check url.
-     * @return the version check id.
      */
-    public static String setVersionCheck(String id)
+    public static void setVersionCheck()
     {
-        versionCheckUrl = id;
         hasVersionCheck = true;
-        return id;
     }
     
     /**

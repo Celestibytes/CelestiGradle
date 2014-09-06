@@ -1,0 +1,30 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            name = "forge"
+            url = "http://files.minecraftforge.net/maven/"
+        }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        classpath group: 'io.github.celestibytes', name: 'CelestiGradle', version: '3.2-SNAPSHOT', changing: true
+    }
+    configurations.all {
+    	resolutionStrategy.cacheChangingModulesFor 60, 'seconds'
+	}
+}
+
+import static celestibytes.gradle.CelestiGradlePlugin.*
+
+versionNumber('1.0.0')
+basePackage('celestibytes.lib')
+artifactsList(['javadoc', 'src'])
+
+apply plugin: 'celestibytes'
+
+group 'io.github.celestibytes'
+archivesBaseName = project.getName()

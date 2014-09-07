@@ -17,11 +17,11 @@ package celestibytes.gradle;
 import celestibytes.gradle.dependency.Dependency;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
-import celestibytes.gradle.reference.Versions;
 import celestibytes.lib.derp.DerpException;
 import celestibytes.lib.version.Release;
 import celestibytes.lib.version.Version;
 import celestibytes.lib.version.VersionFormatException;
+import celestibytes.lib.version.Versions;
 
 import net.minecraftforge.gradle.CopyInto;
 import net.minecraftforge.gradle.FileLogListenner;
@@ -1238,9 +1238,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         try
         {
             Version remote = Version.parseFromUrl(Reference.VERSION_CHECK_URL);
-            Version local = Version.parse(Versions.VERSION);
+            Version local = Version.parse(Reference.VERSION);
             
-            if (remote.compareTo(local) > 0)
+            if (Versions.INSTANCE.compare(remote, local) > 0)
             {
                 projectStatic.getLogger().lifecycle("****************************");
                 projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available:");
@@ -1267,7 +1267,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         projectStatic.getLogger().lifecycle("****************************");
         projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
-        projectStatic.getLogger().lifecycle(" Version " + Versions.VERSION);
+        projectStatic.getLogger().lifecycle(" Version " + Reference.VERSION);
         projectStatic.getLogger().lifecycle(" Project version " + versionNumber);
         
         if (fg)
@@ -1643,7 +1643,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      */
     public static String setMc()
     {
-        return setMc(Versions.DEFAULT_MINECRAFT_VERSION);
+        return setMc(Reference.DEFAULT_MINECRAFT_VERSION);
     }
     
     /**

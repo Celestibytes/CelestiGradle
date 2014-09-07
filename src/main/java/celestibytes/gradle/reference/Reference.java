@@ -18,7 +18,9 @@ public final class Reference
 {
     public static final String NAME = "CelestiGradle";
     public static final String NAME_FULL = "Celestibytes Gradle Plugin";
-    public static final String VERSION = Versions.VERSION;
+    
+    public static final String VERSION = "3.3-SNAPSHOT";
+    public static final String DEFAULT_MINECRAFT_VERSION = "1.7.10";
     
     public static final String VERSION_CHECK_URL = "https://raw.githubusercontent.com/Celestibytes/CelestiGradle/master/version.txt";
     

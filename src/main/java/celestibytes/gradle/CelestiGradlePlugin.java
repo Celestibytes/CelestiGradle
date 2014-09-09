@@ -18,7 +18,7 @@ import celestibytes.gradle.dependency.Dependency;
 import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 import celestibytes.lib.derp.DerpException;
-import celestibytes.lib.version.Release;
+import celestibytes.lib.version.SemanticVersion;
 import celestibytes.lib.version.Version;
 import celestibytes.lib.version.VersionFormatException;
 import celestibytes.lib.version.Versions;
@@ -328,9 +328,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         hasKeystore = project.hasProperty("keystoreLocation");
         
-        if (versionObj.isRelease())
+        if (versionObj instanceof SemanticVersion)
         {
-            isStable = ((Release) versionObj).isStable();
+            isStable = ((SemanticVersion) versionObj).isStable();
         }
         else
         {
@@ -1237,10 +1237,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     {
         try
         {
-            Version remote = Version.parseFromUrl(Reference.VERSION_CHECK_URL);
-            Version local = Version.parse(Reference.VERSION);
+            Version remote = Versions.parseFromUrl(Reference.VERSION_CHECK_URL);
+            Version local = Versions.parse(Reference.VERSION);
             
-            if (Versions.INSTANCE.compare(remote, local) > 0)
+            if (Versions.comparator.compare(remote, local) > 0)
             {
                 projectStatic.getLogger().lifecycle("****************************");
                 projectStatic.getLogger().lifecycle(" A new version of " + Reference.NAME_FULL + " is available:");
@@ -1607,7 +1607,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static String setVersionNumber(String s)
     {
         versionNumber = s;
-        versionObj = Version.parse(s);
+        versionObj = Versions.parse(s);
         return versionNumber;
     }
     

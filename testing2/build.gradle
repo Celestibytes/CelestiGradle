@@ -11,7 +11,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath group: 'io.github.celestibytes', name: 'CelestiGradle', version: '3.2-SNAPSHOT', changing: true
+        classpath group: 'io.github.celestibytes', name: 'CelestiGradle', version: '3.3-SNAPSHOT', changing: true
     }
     configurations.all {
     	resolutionStrategy.cacheChangingModulesFor 60, 'seconds'

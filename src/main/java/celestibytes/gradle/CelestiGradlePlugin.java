@@ -181,7 +181,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The {@link List} of dependencies for this project specified in the build
      * script.
      */
-    private static List<String> deps = Lists.newArrayList();
+    private static List<String> deps = new ArrayList<String>();
     
     /**
      * The relative path to the dependencies file. Only needed if the project
@@ -199,21 +199,21 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      * The {@link List} of dependencies already added to this project through
      * the {@link CelestiGradlePlugin}.
      */
-    private static List<String> addedLibs = Lists.newArrayList();
+    private static List<String> addedLibs = new ArrayList<String>();
     
     /**
      * The {@link Map} of registered dependencies.
      * <p/>
      * First the name, then the {@link Dependency}.
      */
-    private static Map<String, Dependency> knownDeps = Maps.newHashMap();
+    private static Map<String, Dependency> knownDeps = new HashMap<String, Dependency>();
     
     /**
      * The {@link Map} of alternative names for registered dependencies.
      * <p/>
      * First the alias, then the knownDeps key it leads to.
      */
-    private static Map<String, List<String>> knownAliases = Maps.newHashMap();
+    private static Map<String, List<String>> knownAliases = new HashMap<String, List<String>>();
     
     /**
      * An instance of the {@link Project}.
@@ -249,13 +249,20 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project.getLogging().addStandardErrorListener(listener);
         project.getGradle().addBuildListener(listener);
         
+        applyPlugins();
         addRepositories();
         resolveProperties();
-        applyPlugins();
         
         if (!fg)
         {
-            displayBanner();
+            project.afterEvaluate(new Action<Project>()
+            {
+                @Override
+                public void execute(Project arg0)
+                {
+                    displayBanner();
+                }
+            });
         }
         
         addDependencies();
@@ -358,7 +365,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             
             if (isMinecraftMod)
             {
-                applyExternalPlugin("forge");
+                // TODO applyExternalPlugin("forge");
                 fg = true;
             }
             else
@@ -382,7 +389,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         
         registerCelestiDep("CelestiCore", "0.6.0", "celesticore", "core");
-        registerCelestiDep("CelestiLib", "0.3.0", "celestilib", "lib");
+        registerCelestiDep("CelestiLib", "0.4.0", "celestilib", "lib");
         
         registerDep("lzma", "com.github.jponge", "lzma-java", "1.3");
         registerDep("asm", "org.ow2.asm", "asm-debug-all", "5.0.3", "asm-debug");
@@ -444,9 +451,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 List<String> lines = FileUtils.readLines(project.file(depsFile));
                 
                 for (String line : lines)
-                {
-                    line = line.trim();
-                    
+                {                    
                     if (line.equals("") || line == null)
                     {
                         continue;
@@ -454,12 +459,12 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                     
                     if (line.contains(":"))
                     {
-                        String[] array = line.split(":");
+                        String[] array = line.trim().split(":");
                         addDependency(array[0], array[1]);
                     }
                     else
                     {
-                        addDependency(line);
+                        addDependency(line.trim());
                     }
                 }
             }
@@ -476,16 +481,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         for (String s : deps)
         {
-            s = s.trim();
-            
             if (s.contains(":"))
             {
-                String[] array = s.split(":");
+                String[] array = s.trim().split(":");
                 addDependency(array[0], array[1]);
             }
             else
             {
-                addDependency(s);
+                addDependency(s.trim());
             }
         }
     }
@@ -869,7 +872,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      */
     private void addDependency(String name, String version)
     {
-        addDependency(knownDeps.get(name), version);
+        if (knownAliases.containsKey(name))
+        {
+            for (String s : knownAliases.get(name))
+            {
+                addDependency(knownDeps.get(s), version);
+            }
+        }
     }
     
     /**
@@ -943,12 +952,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             return;
         }
         
-        project.getDependencies().add("compile", dependency);
+        project.getLogger().lifecycle("Adding dependency: " + dependency);
         
         if (dependency instanceof String)
         {
             addedLibs.add((String) dependency);
         }
+        
+        project.getDependencies().add("compile", dependency);
     }
     
     /**
@@ -1184,7 +1195,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         else
         {
-            list = Lists.newArrayList();
+            list = new ArrayList<String>();
         }
         
         if (!list.contains(name))
@@ -1200,7 +1211,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
         else
         {
-            list = Lists.newArrayList();
+            list = new ArrayList<String>();
         }
         
         if (!list.contains(name))
@@ -1218,7 +1229,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             }
             else
             {
-                list = Lists.newArrayList();
+                list = new ArrayList<String>();
             }
             
             if (!list.contains(name))

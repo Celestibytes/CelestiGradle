@@ -279,6 +279,37 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     /**
+     * Applies required external and internal {@link Plugin}s to the
+     * {@link Project}.
+     */
+    private void applyPlugins()
+    {
+        if (!fg)
+        {
+            if (scala)
+            {
+                applyExternalPlugin("scala");
+            }
+            
+            applyExternalPlugin("java");
+            applyExternalPlugin("maven");
+            applyExternalPlugin("eclipse");
+            applyExternalPlugin("idea");
+            
+            if (isMinecraftMod)
+            {
+                applyExternalPlugin("forge");
+                fg = true;
+            }
+            else
+            {
+                applyExternalPlugin("dummy");
+                BasePlugin.displayBanner = false;
+            }
+        }
+    }
+    
+    /**
      * Adds required maven repositories to the {@link Project}.
      */
     private void addRepositories()
@@ -289,6 +320,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             public void execute(Project project)
             {
                 project.getRepositories().mavenCentral();
+                addMavenRepo(project, "Sonatype Snapshot Repository", "https://oss.sonatype.org/content/repositories/snapshots/");
             }
         });
     }
@@ -342,37 +374,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         else
         {
             isStable = false;
-        }
-    }
-    
-    /**
-     * Applies required external and internal {@link Plugin}s to the
-     * {@link Project}.
-     */
-    private void applyPlugins()
-    {
-        if (!fg)
-        {
-            if (scala)
-            {
-                applyExternalPlugin("scala");
-            }
-            
-            applyExternalPlugin("java");
-            applyExternalPlugin("maven");
-            applyExternalPlugin("eclipse");
-            applyExternalPlugin("idea");
-            
-            if (isMinecraftMod)
-            {
-                // TODO applyExternalPlugin("forge");
-                fg = true;
-            }
-            else
-            {
-                applyExternalPlugin("dummy");
-                BasePlugin.displayBanner = false;
-            }
         }
     }
     
@@ -1383,10 +1384,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      *            the {@link Plugin}.
      */
     public void applyExternalPlugin(String plugin)
-    {
-        HashMap<String, Object> map = new HashMap<String, Object>();
-        map.put("plugin", plugin);
-        project.apply(map);
+    {        
+        if (!project.getPlugins().hasPlugin(plugin))
+        {
+            HashMap<String, Object> map = new HashMap<String, Object>();
+            map.put("plugin", plugin);
+            project.apply(map);
+        }
     }
     
     /**

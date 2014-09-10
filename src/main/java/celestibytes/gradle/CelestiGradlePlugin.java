@@ -1514,7 +1514,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static String getCWVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
-        return getProperty(project, "src/main/" + s + "/celestibytes/celestialwizardry/reference/Versions.java", field);
+        return getProperty(project, "src/main/" + s + "/celestibytes/celestialwizardry/reference/Reference.java", field);
     }
     
     /**
@@ -1530,7 +1530,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static String getDgCVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
-        return getProperty(project, "src/main/" + s + "/pizzana/doughcraft/reference/Versions.java", field);
+        return getProperty(project, "src/main/" + s + "/pizzana/doughcraft/reference/Reference.java", field);
     }
     
     /**
@@ -1545,7 +1545,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
      */
     public static String getCGVersion(Project project, String field) throws IOException
     {
-        return getProperty(project, "src/main/java/celestibytes/gradle/reference/Versions.java", field);
+        return getProperty(project, "src/main/java/celestibytes/gradle/reference/Reference.java", field);
     }
     
     /**
@@ -1561,7 +1561,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static String getCoreVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
-        return getProperty(project, "src/main/" + s + "/celestibytes/core/reference/Versions.java", field);
+        return getProperty(project, "src/main/" + s + "/celestibytes/core/reference/Reference.java", field);
     }
     
     /**

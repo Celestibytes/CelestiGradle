@@ -458,10 +458,28 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                         continue;
                     }
                     
-                    if (line.contains(":"))
+                    if (line.trim().startsWith("#"))
+                    {
+                        addDependency(line.trim().replace("#", ""));
+                    }
+                    else if (line.contains(":"))
                     {
                         String[] array = line.trim().split(":");
-                        addDependency(array[0], array[1]);
+                        
+                        if (array.length == 2)
+                        {
+                            addDependency(array[0], array[1]);
+                        }
+                        else if (array.length == 3)
+                        {
+                            if (knownAliases.containsKey(array[0]))
+                            {
+                                for (String s : knownAliases.get(array[0]))
+                                {
+                                    addDependency(knownDeps.get(s).getGroup() + ":" + knownDeps.get(s).getArtifact() + ":" + array[1] + ":" + array[2]);
+                                }
+                            }
+                        }
                     }
                     else
                     {

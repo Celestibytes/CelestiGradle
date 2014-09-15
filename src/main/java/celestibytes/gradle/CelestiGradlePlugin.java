@@ -14,14 +14,12 @@
 
 package celestibytes.gradle;
 
-import celestibytes.lib.derp.DerpException;
 import celestibytes.lib.version.SemanticVersion;
 import celestibytes.lib.version.Version;
 import celestibytes.lib.version.VersionFormatException;
 import celestibytes.lib.version.Versions;
 
 import celestibytes.gradle.dependency.Dependency;
-import celestibytes.gradle.reference.Projects;
 import celestibytes.gradle.reference.Reference;
 
 import net.minecraftforge.gradle.CopyInto;
@@ -33,7 +31,6 @@ import net.minecraftforge.gradle.delayed.DelayedBase;
 import net.minecraftforge.gradle.delayed.DelayedFile;
 import net.minecraftforge.gradle.delayed.DelayedFileTree;
 import net.minecraftforge.gradle.delayed.DelayedString;
-import net.minecraftforge.gradle.tasks.abstractutil.DownloadTask;
 import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
 
 import com.google.common.collect.Lists;
@@ -49,7 +46,6 @@ import org.gradle.api.Task;
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.specs.Spec;
-import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.bundling.Jar;
 
 import groovy.lang.Closure;
@@ -66,22 +62,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
 {
     private static Project projectStatic;
     
-    @Deprecated
-    private static boolean fg;
     private static String versionNumber;
     private static Version versionObj;
-    
-    @Deprecated
-    private static boolean isMinecraftMod = false;
-    
-    @Deprecated
-    private static String minecraftVersion;
-    
-    @Deprecated
-    private static boolean needsCore = false;
-    
-    @Deprecated
-    private static String coreVersion = "";
     private static String basePackage;
     private static String dir;
     private static List<String> artifactsList = Lists.newArrayList();
@@ -90,19 +72,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     private static Closure manifest;
     private static boolean hasManifest = false;
     
-    @SuppressWarnings("unused")
-    @Deprecated
-    private static String versionCheckUrl1;
     private static boolean hasVersionCheck = false;
-    
-    @Deprecated
-    private static String baublesVersion;
-    
-    @Deprecated
-    private static String baublesMinecraft;
-    
-    @Deprecated
-    private static boolean needsBaubles = false;
     private static boolean scala = false;
     private static List<String> deps = new ArrayList<String>();
     private static String depsFile;
@@ -121,7 +91,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         project = target;
         
         projectStatic = project;
-        fg = project.getPlugins().hasPlugin("forge");
         
         FileLogListenner listener = new FileLogListenner(project.file(Constants.LOG));
         project.getLogging().addStandardOutputListener(listener);
@@ -132,24 +101,16 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         addRepositories();
         resolveProperties();
         
-        if (!fg)
-        {
-            project.afterEvaluate(new Action<Project>()
-            {
-                @Override
-                public void execute(Project arg0)
+        project.afterEvaluate(new Action<Project>()
                 {
-                    displayBanner();
-                }
-            });
-        }
+                    @Override
+                    public void execute(Project arg0)
+                    {
+                        displayBanner();
+                    }
+                });
         
         addDependencies();
-        
-        if (needsBaubles)
-        {
-            makeBaublesTask();
-        }
         
         makePackageTasks();
         makeSignTask();
@@ -159,29 +120,17 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     
     private void applyPlugins()
     {
-        if (!fg)
+        if (scala)
         {
-            if (scala)
-            {
-                applyExternalPlugin("scala");
-            }
-            
-            applyExternalPlugin("java");
-            applyExternalPlugin("maven");
-            applyExternalPlugin("eclipse");
-            applyExternalPlugin("idea");
-            
-            if (isMinecraftMod)
-            {
-                applyExternalPlugin("forge");
-                fg = true;
-            }
-            else
-            {
-                applyExternalPlugin("dummy");
-                BasePlugin.displayBanner = false;
-            }
+            applyExternalPlugin("scala");
         }
+        
+        applyExternalPlugin("java");
+        applyExternalPlugin("maven");
+        applyExternalPlugin("eclipse");
+        applyExternalPlugin("idea");
+        applyExternalPlugin("dummy");
+        BasePlugin.displayBanner = false;
     }
     
     private void addRepositories()
@@ -206,30 +155,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             throw new ProjectConfigurationException("You must set the version number!", new NullPointerException());
         }
         
-        if (fg && !isMinecraftMod)
-        {
-            throw new ProjectConfigurationException("Project has forge plugin but isn't a Minecraft mod!",
-                    new DerpException());
-        }
-        
-        if (isMinecraftMod)
-        {
-            if (needsCore)
-            {
-                if (coreVersion == null)
-                {
-                    throw new ProjectConfigurationException("You must set the core version number!",
-                            new NullPointerException());
-                }
-            }
-            
-            if (minecraftVersion == null)
-            {
-                throw new ProjectConfigurationException("You must set the minecraft version number!",
-                        new NullPointerException());
-            }
-        }
-        
         if (basePackage == null)
         {
             throw new ProjectConfigurationException("You must set the base package!", new NullPointerException());
@@ -250,10 +175,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     @SuppressWarnings("unchecked")
     private void addDependencies()
     {
-        if (!fg)
-        {
-            addDependency(project.fileTree("libs"));
-        }
+        addDependency(project.fileTree("libs"));
         
         registerCelestiDep("CelestiCore", "0.6.0", "celesticore", "core");
         registerCelestiDep("CelestiLib", "0.4.0", "celestilib", "lib");
@@ -306,11 +228,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         registerLog4j("core");
         registerLog4j("api");
-        
-        if (needsCore)
-        {
-            addDependency("CelestiCore", coreVersion);
-        }
         
         if (useDepsFile)
         {
@@ -380,83 +297,10 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         }
     }
     
+    @SuppressWarnings("unused")
+    @Deprecated
     private void makeBaublesTask()
-    {
-        String baublesFile = "Baubles-deobf-" + baublesMinecraft + "-" + baublesVersion + ".jar";
-        final String baublesDest = "libs/" + baublesFile;
-        String baublesUrl = "https://dl.dropboxusercontent.com/u/47135879/" + baublesFile;
-        
-        File[] files = delayedFile("libs").call().listFiles();
-        List<File> baubs = new ArrayList<File>();
-        boolean hasUpToDateBaubles = false;
-        
-        if (files != null)
-        {
-            for (File file : files)
-            {
-                if (file.isFile())
-                {
-                    if (file.getName().contains("Baubles"))
-                    {
-                        if (file.getName().equals(baublesFile))
-                        {
-                            hasUpToDateBaubles = true;
-                        }
-                        else
-                        {
-                            baubs.add(file);
-                        }
-                    }
-                }
-            }
-        }
-        
-        Delete cleanEveryBaubles = makeTask("cleanEveryBaubles", Delete.class);
-        
-        for (File file : baubs)
-        {
-            cleanEveryBaubles.delete(file);
-        }
-        
-        if (hasUpToDateBaubles)
-        {
-            cleanEveryBaubles.delete(delayedFile(baublesDest).call());
-        }
-        
-        cleanEveryBaubles
-                .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory");
-        cleanEveryBaubles.setGroup(Reference.NAME);
-        
-        Delete cleanBaubles = makeTask("cleanBaubles", Delete.class);
-        
-        for (File file : baubs)
-        {
-            cleanBaubles.delete(file);
-        }
-        
-        cleanBaubles
-                .setDescription("Deletes all of the libraries containing \'Baubles\' in their name from the \'libs\' directory "
-                        + "(excluding the up-to-date one)");
-        cleanBaubles.setGroup(Reference.NAME);
-        
-        DownloadTask getBaubles = makeTask("getBaubles", DownloadTask.class);
-        getBaubles.setUrl(delayedString(baublesUrl));
-        getBaubles.setOutput(delayedFile(baublesDest));
-        getBaubles.getOutputs().upToDateWhen(new Spec<Task>()
-        {
-            @Override
-            public boolean isSatisfiedBy(Task task)
-            {
-                DelayedFile excepted = delayedFile(baublesDest);
-                return excepted.call().exists() && !excepted.call().isDirectory();
-            }
-        });
-        getBaubles.setDescription("Downloads the correct version of Baubles");
-        getBaubles.setGroup(Reference.NAME);
-        getBaubles.dependsOn(cleanBaubles);
-        
-        project.getTasks().getByName("extractUserDev").dependsOn(getBaubles);
-    }
+    {}
     
     private void makePackageTasks()
     {
@@ -652,26 +496,9 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
                 try
                 {
                     Map<String, String> args = Maps.newHashMap();
-                    
-                    if (isMinecraftMod)
-                    {
-                        args.put("file", "./" + minecraftVersion + ".txt");
-                    }
-                    else
-                    {
-                        args.put("file", "./version.txt");
-                    }
-                    
+                    args.put("file", "./version.txt");
                     invokeAnt("delete", args);
-                    
-                    if (isMinecraftMod)
-                    {
-                        FileUtils.writeStringToFile(project.file("./" + minecraftVersion + ".txt"), versionNumber);
-                    }
-                    else
-                    {
-                        FileUtils.writeStringToFile(project.file("./version.txt"), versionNumber);
-                    }
+                    FileUtils.writeStringToFile(project.file("./version.txt"), versionNumber);
                 }
                 catch (IOException e)
                 {
@@ -966,26 +793,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         projectStatic.getLogger().lifecycle(" Welcome to " + Reference.NAME_FULL);
         projectStatic.getLogger().lifecycle(" Version " + Reference.VERSION);
         projectStatic.getLogger().lifecycle(" Project version " + versionNumber);
-        
-        if (fg)
-        {
-            projectStatic.getLogger().lifecycle(" ForgeGradle enabled        ");
-            projectStatic.getLogger().lifecycle(" Minecraft version " + minecraftVersion);
-            
-            if (needsCore)
-            {
-                projectStatic.getLogger().lifecycle(" Celestibytes Core version " + coreVersion);
-            }
-            
-            if (needsBaubles)
-            {
-                projectStatic.getLogger().lifecycle(" Baubles version " + baublesVersion);
-            }
-        }
-        else
-        {
-            projectStatic.getLogger().lifecycle("****************************");
-        }
+        projectStatic.getLogger().lifecycle("****************************");
     }
     
     public DefaultTask makeTask(String name)
@@ -1077,32 +885,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public String resolve(String pattern, Project project, BaseExtension extension)
     {
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
-        pattern = pattern.replace("{CORE_VERSION}", coreVersion);
-        pattern = pattern.replace("{CORE_NAME}", Projects.CORE);
         return pattern;
     }
     
-    public static String getCWVersion(Project project, String field) throws IOException
+    public static String getCTIEVersion(Project project, String field) throws IOException
     {
         String s = scala ? "scala" : "java";
-        return getProperty(project, "src/main/" + s + "/celestibytes/celestialwizardry/reference/Reference.java", field);
-    }
-    
-    public static String getDgCVersion(Project project, String field) throws IOException
-    {
-        String s = scala ? "scala" : "java";
-        return getProperty(project, "src/main/" + s + "/pizzana/doughcraft/reference/Reference.java", field);
-    }
-    
-    public static String getCGVersion(Project project, String field) throws IOException
-    {
-        return getProperty(project, "src/main/java/celestibytes/gradle/reference/Reference.java", field);
-    }
-    
-    public static String getCoreVersion(Project project, String field) throws IOException
-    {
-        String s = scala ? "scala" : "java";
-        return getProperty(project, "src/main/" + s + "/celestibytes/core/reference/Reference.java", field);
+        return getProperty(project, "src/main/" + s + "/celestibytes/ctie/reference/Reference.java", field);
     }
     
     @SuppressWarnings("unchecked")
@@ -1139,40 +928,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         versionNumber = s;
         versionObj = Versions.parse(s);
         return versionNumber;
-    }
-    
-    public static String mc()
-    {
-        return setMc();
-    }
-    
-    public static String mc(String version)
-    {
-        return setMc(version);
-    }
-    
-    public static String setMc()
-    {
-        return setMc(Reference.DEFAULT_MINECRAFT_VERSION);
-    }
-    
-    public static String setMc(String version)
-    {
-        isMinecraftMod = true;
-        minecraftVersion = version;
-        return version;
-    }
-    
-    public static String core(String version)
-    {
-        return setCore(version);
-    }
-    
-    public static String setCore(String version)
-    {
-        needsCore = true;
-        coreVersion = version;
-        return version;
     }
     
     public static String basePackage(String s)
@@ -1231,29 +986,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     public static void setVersionCheck()
     {
         hasVersionCheck = true;
-    }
-    
-    public static String baubles(String s)
-    {
-        return setBaubles(s);
-    }
-    
-    public static String baubles(String s, String mc)
-    {
-        return setBaubles(s, mc);
-    }
-    
-    public static String setBaubles(String s)
-    {
-        return setBaubles(s, minecraftVersion);
-    }
-    
-    public static String setBaubles(String s, String mc)
-    {
-        baublesVersion = s;
-        baublesMinecraft = mc;
-        needsBaubles = true;
-        return s;
     }
     
     public static boolean scala()

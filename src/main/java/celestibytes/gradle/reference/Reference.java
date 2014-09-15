@@ -20,8 +20,9 @@ public final class Reference
     public static final String NAME_FULL = "Celestibytes Gradle Plugin";
     
     public static final String VERSION = "4.0-SNAPSHOT";
-    
     public static final String VERSION_CHECK_URL = "https://raw.githubusercontent.com/Celestibytes/CelestiGradle/master/version.txt";
+    
+    public static final String LOG = ".gradle/gradle.log";
     
     public static final String DEFAULT_DEPS_FILE = "dependencies.cbts";
 }

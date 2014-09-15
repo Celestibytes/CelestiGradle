@@ -49,7 +49,7 @@ public final class Dependency
     {
         return name;
     }
-
+    
     /**
      * Gives the aliases of the {@link Dependency}.
      *

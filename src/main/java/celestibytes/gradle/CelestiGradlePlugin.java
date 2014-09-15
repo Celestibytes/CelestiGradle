@@ -19,19 +19,15 @@ import celestibytes.lib.version.Version;
 import celestibytes.lib.version.VersionFormatException;
 import celestibytes.lib.version.Versions;
 
+import celestibytes.gradle.delayed.DelayedBase.IDelayedResolver;
+import celestibytes.gradle.delayed.DelayedFile;
+import celestibytes.gradle.delayed.DelayedFileTree;
+import celestibytes.gradle.delayed.DelayedString;
 import celestibytes.gradle.dependency.Dependency;
 import celestibytes.gradle.reference.Reference;
-
-import net.minecraftforge.gradle.CopyInto;
-import net.minecraftforge.gradle.FileLogListenner;
-import net.minecraftforge.gradle.common.BaseExtension;
-import net.minecraftforge.gradle.common.BasePlugin;
-import net.minecraftforge.gradle.common.Constants;
-import net.minecraftforge.gradle.delayed.DelayedBase;
-import net.minecraftforge.gradle.delayed.DelayedFile;
-import net.minecraftforge.gradle.delayed.DelayedFileTree;
-import net.minecraftforge.gradle.delayed.DelayedString;
-import net.minecraftforge.gradle.tasks.dev.ChangelogTask;
+import celestibytes.gradle.tasks.ChangelogTask;
+import celestibytes.gradle.util.CopyInto;
+import celestibytes.gradle.util.FileLogListenner;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -58,7 +54,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
+public final class CelestiGradlePlugin implements Plugin<Project>, IDelayedResolver
 {
     private static Project projectStatic;
     
@@ -92,7 +88,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         
         projectStatic = project;
         
-        FileLogListenner listener = new FileLogListenner(project.file(Constants.LOG));
+        FileLogListenner listener = new FileLogListenner(project.file(Reference.LOG));
         project.getLogging().addStandardOutputListener(listener);
         project.getLogging().addStandardErrorListener(listener);
         project.getGradle().addBuildListener(listener);
@@ -102,13 +98,13 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         resolveProperties();
         
         project.afterEvaluate(new Action<Project>()
-                {
-                    @Override
-                    public void execute(Project arg0)
-                    {
-                        displayBanner();
-                    }
-                });
+        {
+            @Override
+            public void execute(Project arg0)
+            {
+                displayBanner();
+            }
+        });
         
         addDependencies();
         
@@ -130,7 +126,6 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
         applyExternalPlugin("eclipse");
         applyExternalPlugin("idea");
         applyExternalPlugin("dummy");
-        BasePlugin.displayBanner = false;
     }
     
     private void addRepositories()
@@ -141,8 +136,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
             public void execute(Project project)
             {
                 project.getRepositories().mavenCentral();
-                addMavenRepo(project, "Sonatype Snapshot Repository",
-                        "https://oss.sonatype.org/content/repositories/snapshots/");
+                addMavenRepo(project, "sonatype", "https://oss.sonatype.org/content/repositories/snapshots/");
                 project.getRepositories().mavenLocal();
             }
         });
@@ -300,7 +294,8 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     @SuppressWarnings("unused")
     @Deprecated
     private void makeBaublesTask()
-    {}
+    {
+    }
     
     private void makePackageTasks()
     {
@@ -882,7 +877,7 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     }
     
     @Override
-    public String resolve(String pattern, Project project, BaseExtension extension)
+    public String resolve(String pattern, Project project)
     {
         pattern = pattern.replace("{PATH}", project.getPath().replace('\\', '/'));
         return pattern;

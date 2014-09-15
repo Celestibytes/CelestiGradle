@@ -65,12 +65,22 @@ import java.util.Map;
 public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.IDelayedResolver<BaseExtension>
 {
     private static Project projectStatic;
+    
+    @Deprecated
     private static boolean fg;
     private static String versionNumber;
     private static Version versionObj;
+    
+    @Deprecated
     private static boolean isMinecraftMod = false;
+    
+    @Deprecated
     private static String minecraftVersion;
+    
+    @Deprecated
     private static boolean needsCore = false;
+    
+    @Deprecated
     private static String coreVersion = "";
     private static String basePackage;
     private static String dir;
@@ -84,8 +94,14 @@ public final class CelestiGradlePlugin implements Plugin<Project>, DelayedBase.I
     @Deprecated
     private static String versionCheckUrl1;
     private static boolean hasVersionCheck = false;
+    
+    @Deprecated
     private static String baublesVersion;
+    
+    @Deprecated
     private static String baublesMinecraft;
+    
+    @Deprecated
     private static boolean needsBaubles = false;
     private static boolean scala = false;
     private static List<String> deps = new ArrayList<String>();
